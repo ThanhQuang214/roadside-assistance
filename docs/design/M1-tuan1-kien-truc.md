@@ -54,20 +54,20 @@ flowchart LR
 ```
 
 ```
-docs/design/                        tài liệu thiết kế từng thành viên (nằm ngoài code)
-roadside-assistance/                toàn bộ mã nguồn (repo code)
-  docs/contracts/   schema.sql · api-contract.md · design-tokens.css   ← chỉ M1 sửa, báo trước
-  src/server.ts     khởi động API, mount router các module
-  src/main.tsx      khởi động UI, khai báo route các module
-  src/shared/       state/ (State Pattern) · strategy/ (Strategy Pattern) · db.ts · http.ts · ui/ (M4)
-  src/auth/  src/rescue-request/  src/company-management/  src/matching-ai/  src/feedback-chat/
+kehoach.md        kế hoạch triển khai
+docs/contracts/   schema.sql · api-contract.md · design-tokens.css   ← chỉ M1 sửa, báo trước
+docs/design/      tài liệu thiết kế từng thành viên
+src/server.ts     khởi động API, mount router các module
+src/main.tsx      khởi động UI, khai báo route các module
+src/shared/       state/ (State Pattern) · strategy/ (Strategy Pattern) · db.ts · http.ts · ui/ (M4)
+src/auth/  src/rescue-request/  src/company-management/  src/matching-ai/  src/feedback-chat/
 ```
 
 ---
 
 ## 2. State Pattern – vòng đời `RescueRequest` (báo cáo 3.4.2)
 
-Mã nguồn: [`src/shared/state/rescue-request-state.ts`](../../roadside-assistance/src/shared/state/rescue-request-state.ts), lưu DB: [`rescue-request-store.ts`](../../roadside-assistance/src/shared/state/rescue-request-store.ts).
+Mã nguồn: [`src/shared/state/rescue-request-state.ts`](../../src/shared/state/rescue-request-state.ts), lưu DB: [`rescue-request-store.ts`](../../src/shared/state/rescue-request-store.ts).
 
 **Vấn đề:** cùng một thao tác (hủy, nhận, hoàn tất…) hợp lệ hay không tùy trạng thái đơn. Viết `if (status === ...)` rải rác trong controller của M2 và M3 dễ sai lệch (ví dụ M2 cho hủy đơn đã Accepted).
 **Giải pháp:** mỗi trạng thái là một lớp; controller chỉ gọi `ctx.cancel()`, `ctx.accept()`… Lớp trạng thái hiện tại tự quyết định chuyển sang trạng thái nào, hoặc ném `InvalidTransitionError` (HTTP 409).
@@ -175,7 +175,7 @@ classDiagram
 
 ## 3. Strategy Pattern – ghép nối công ty & ETA (báo cáo 3.4.3)
 
-Mã nguồn: [`src/shared/strategy/matching-strategy.ts`](../../roadside-assistance/src/shared/strategy/matching-strategy.ts), [`eta-estimator.ts`](../../roadside-assistance/src/shared/strategy/eta-estimator.ts).
+Mã nguồn: [`src/shared/strategy/matching-strategy.ts`](../../src/shared/strategy/matching-strategy.ts), [`eta-estimator.ts`](../../src/shared/strategy/eta-estimator.ts).
 
 **Vấn đề:** S03 cho người dùng sắp xếp "Gần nhất / Đánh giá cao nhất", và nhóm muốn thử thêm cách chấm điểm tổng hợp; ETA Tuần 1 tính đường chim bay, Tuần 2 chuyển sang Maps.
 **Giải pháp:** hai họ thuật toán hoán đổi được qua interface: `IMatchingStrategy` (xếp hạng) và `IEtaEstimator` (khoảng cách + ETA). API chọn strategy theo query `strategy=nearest|rating|weighted`.
