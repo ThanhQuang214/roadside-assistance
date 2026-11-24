@@ -2,6 +2,8 @@ import express from 'express';
 import { getDb } from './shared/db.ts';
 import { errorHandler } from './shared/http.ts';
 import { authRouter } from './auth/auth.api.ts';
+import { companyRouter } from './company-management/company.api.ts';
+import { adminRouter } from './company-management/admin.api.ts';
 
 const app = express();
 app.use(express.json());
@@ -21,8 +23,8 @@ app.get('/api/catalog/vehicle-types', (_req, res) => {
 // Mỗi module mount router của mình tại đây (1 dòng/module), ví dụ:
 app.use('/api', authRouter);                          // M2 – src/auth (/auth/*, /uploads)
 // app.use('/api/rescue-requests', rescueRouter);     // M2 + M3 – src/rescue-request
-// app.use('/api/companies', companyRouter);          // M3 – src/company-management
-// app.use('/api/admin', adminRouter);                // M3 – src/company-management
+app.use('/api/companies', companyRouter);             // M3 – src/company-management
+app.use('/api/admin', adminRouter);                   // M3 – src/company-management
 // app.use('/api', matchingAiRouter);                 // M1 – src/matching-ai
 // app.use('/api', feedbackChatRouter);               // M2 + M4 – src/feedback-chat
 

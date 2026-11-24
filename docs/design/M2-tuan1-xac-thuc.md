@@ -15,7 +15,7 @@ Sơ đồ viết bằng Mermaid (dán vào <https://mermaid.live> để xuất P
 | [`src/auth/auth-middleware.ts`](../../src/auth/auth-middleware.ts) | Control | `requireAuth`, `requireRole(...)`, `requireApprovedCompany`, `signToken`, `getAuth` – **module khác import để phân quyền** |
 | [`src/auth/auth-validation.ts`](../../src/auth/auth-validation.ts) | Control (dùng chung FE/BE) | `validateRegister()` – một bộ quy tắc cho cả form và API |
 | [`src/auth/session.tsx`](../../src/auth/session.tsx) | Boundary (client) | `AuthProvider`/`useAuth`, `apiFetch` (tự gắn token, chuẩn hóa lỗi), `<RequireRole>` chặn route theo vai trò |
-| [`src/auth/LoginPage.tsx`](../../src/auth/LoginPage.tsx), [`RegisterPage.tsx`](../../src/auth/RegisterPage.tsx), [`AccountPage.tsx`](../../src/auth/AccountPage.tsx) | Boundary (UI) | Màn hình A-01, A-02, A-03 |
+| [`src/auth/LoginPage.tsx`](../../src/auth/LoginPage.tsx), [`RegisterPage.tsx`](../../src/auth/RegisterPage.tsx), [`AccountPage.tsx`](../../src/auth/AccountPage.tsx) | Boundary (UI) | Màn hình A-01, A-02, A-03 (ô nhập/nút dùng chung ở [`src/shared/ui/form.tsx`](../../src/shared/ui/form.tsx)) |
 | [`src/auth/create-admin.ts`](../../src/auth/create-admin.ts) | Tiện ích | Tạo tài khoản ADMIN: `npm run create-admin -- <email> <matKhau>` (API không cho đăng ký ADMIN) |
 | [`src/auth/auth.test.ts`](../../src/auth/auth.test.ts) | Test | Đăng ký/đăng nhập/me, lỗi 400/401/403/409, công ty chưa duyệt, upload |
 
@@ -167,17 +167,19 @@ Route cần đăng nhập mà chưa có token → A-01; đăng nhập xong quay 
 | Số điện thoại | input tel | `^0\d{9}$` | "Số điện thoại không hợp lệ." |
 | Email | input email | đúng định dạng, chưa tồn tại (BE → 409) | "Email không hợp lệ." / "Email đã được sử dụng." |
 | Mật khẩu / Nhập lại | input password | ≥ 8 ký tự; hai ô khớp (chỉ FE) | "Mật khẩu phải có ít nhất 8 ký tự." / "Mật khẩu nhập lại không khớp." |
-| *Chỉ COMPANY:* Tên, SĐT, Địa chỉ trạm, Số giấy phép | input | bắt buộc; SĐT `^0\d{9}$` | "Vui lòng nhập …" |
-| Giấy phép | input file | JPG/PNG/WebP/PDF ≤ 5 MB, upload ngay khi chọn | "File phải là JPG, PNG, WebP hoặc PDF và nhỏ hơn 5MB." |
+| *Chỉ COMPANY:* Tên, SĐT, Địa chỉ trạm | input | bắt buộc; SĐT `^0\d{9}$` | "Vui lòng nhập …" |
 | Vĩ độ / Kinh độ trạm + "Dùng vị trí hiện tại" | input number + nút Secondary | lat ∈ [8, 24], lng ∈ [102, 110] | "Vui lòng xác định vị trí trạm trên lãnh thổ Việt Nam." |
 | Bán kính phục vụ (km) | input number | > 0 | "Bán kính phục vụ phải lớn hơn 0 km." |
+| Số giấy phép | input | bắt buộc | "Vui lòng nhập số giấy phép kinh doanh." |
+| Giấy phép | input file | JPG/PNG/WebP/PDF ≤ 5 MB, upload ngay khi chọn | "File phải là JPG, PNG, WebP hoặc PDF và nhỏ hơn 5MB." |
 | Đăng ký / Gửi hồ sơ đăng ký | nút Primary | chặn gửi trùng khi đang gửi/đang upload; lỗi đầu tiên được focus | lỗi mạng/máy chủ → banner đỏ |
 
-### A-03 Tài khoản (`/account`; tạm làm trang `/company`, `/admin` tới khi M3 có trang chính)
+### A-03 Tài khoản (`/account`)
 | Vùng | Nội dung |
 |---|---|
 | Thẻ thông tin | Họ tên, Email, SĐT, Vai trò, Ngày tạo |
-| Thẻ công ty (COMPANY) | Tên + chip trạng thái duyệt (Chờ duyệt = vàng, Đã duyệt = xanh lá, Bị từ chối = đỏ + lý do), SĐT, địa chỉ, link giấy phép, bán kính |
+| "← Về trang chính" | Về trang theo vai trò |
+| Hồ sơ công ty & dịch vụ (COMPANY) | Link sang C-01 `/company` (M3) – nơi xem trạng thái duyệt và hồ sơ công ty mới nhất |
 | Đăng xuất | nút viền chữ đỏ → xóa token → A-01 |
 
 ---
@@ -201,12 +203,11 @@ classDiagram
       +onSubmit(e)
     }
     class AccountPage {
-      +render(user, company)
+      +render(user)
     }
     class AuthSession {
       <<AuthProvider + useAuth>>
       +user: User
-      +company: Company
       +loading: boolean
       +login(email, password) User
       +logout()
@@ -298,7 +299,7 @@ router.get('/me/services', ...requireApprovedCompany, (req, res) => { const comp
 import { apiFetch, RequireRole, useAuth } from '../auth/session.tsx';
 const { items } = await apiFetch('/companies/me/services');                    // lỗi → ApiError { status, code, message, field }
 await apiFetch('/rescue-requests', { method: 'POST', body: JSON.stringify(data) });
-<Route path="/company" element={<RequireRole roles={['COMPANY']}><CompanyHome /></RequireRole>} />  // M3 thay AccountPage tạm
+<Route path="/company" element={<RequireRole roles={['COMPANY']}><CompanyManagePage /></RequireRole>} />
 ```
 
 ---

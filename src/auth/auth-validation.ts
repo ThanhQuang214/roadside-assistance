@@ -19,13 +19,20 @@ export function validateRegister(body: any): FieldError | null {
   if (body.role === 'USER') return null;
 
   const c = body.company ?? {};
-  if (!str(c.name)) return { field: 'company.name', message: 'Vui lòng nhập tên công ty.' };
-  if (!PHONE_RE.test(str(c.phone))) return { field: 'company.phone', message: 'Số điện thoại công ty không hợp lệ.' };
-  if (!str(c.address)) return { field: 'company.address', message: 'Vui lòng nhập địa chỉ trạm.' };
+  const profileErr = validateCompanyProfile(c);
+  if (profileErr) return { field: `company.${profileErr.field}`, message: profileErr.message };
   if (!str(c.licenseNumber)) return { field: 'company.licenseNumber', message: 'Vui lòng nhập số giấy phép kinh doanh.' };
   if (!str(c.licenseFileUrl)) return { field: 'company.licenseFileUrl', message: 'Vui lòng tải lên giấy phép kinh doanh.' };
+  return null;
+}
+
+/** Hồ sơ & phạm vi hoạt động công ty – dùng khi đăng ký (UC01) và khi công ty cập nhật (UC08, PUT /companies/me). */
+export function validateCompanyProfile(c: any): FieldError | null {
+  if (!str(c?.name)) return { field: 'name', message: 'Vui lòng nhập tên công ty.' };
+  if (!PHONE_RE.test(str(c.phone))) return { field: 'phone', message: 'Số điện thoại công ty không hợp lệ.' };
+  if (!str(c.address)) return { field: 'address', message: 'Vui lòng nhập địa chỉ trạm.' };
   const lat = num(c.stationLat), lng = num(c.stationLng);
-  if (!(lat >= 8 && lat <= 24 && lng >= 102 && lng <= 110)) return { field: 'company.stationLat', message: 'Vui lòng xác định vị trí trạm trên lãnh thổ Việt Nam.' };
-  if (!(num(c.serviceRadiusKm) > 0)) return { field: 'company.serviceRadiusKm', message: 'Bán kính phục vụ phải lớn hơn 0 km.' };
+  if (!(lat >= 8 && lat <= 24 && lng >= 102 && lng <= 110)) return { field: 'stationLat', message: 'Vui lòng xác định vị trí trạm trên lãnh thổ Việt Nam.' };
+  if (!(num(c.serviceRadiusKm) > 0)) return { field: 'serviceRadiusKm', message: 'Bán kính phục vụ phải lớn hơn 0 km.' };
   return null;
 }

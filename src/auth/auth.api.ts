@@ -5,6 +5,7 @@ import express, { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import { getDb } from '../shared/db.ts';
+import { findCompanyByUserId } from '../company-management/company-store.ts';
 import { HttpError } from '../shared/http.ts';
 import { getAuth, requireAuth, signToken } from './auth-middleware.ts';
 import { validateRegister } from './auth-validation.ts';
@@ -64,12 +65,7 @@ authRouter.get('/auth/me', requireAuth, (_req, res) => {
   const db = getDb();
   const user = findUser(db, userId);
   if (!user) throw new HttpError(401, 'UNAUTHENTICATED', 'Tài khoản không còn tồn tại.');
-  const company = db.prepare(`
-    SELECT id, name, phone, address, license_number AS licenseNumber, license_file_url AS licenseFileUrl,
-           station_lat AS stationLat, station_lng AS stationLng, service_radius_km AS serviceRadiusKm,
-           approval_status AS approvalStatus, reject_reason AS rejectReason, approved_at AS approvedAt,
-           rating_avg AS ratingAvg, rating_count AS ratingCount, created_at AS createdAt
-    FROM rescue_companies WHERE user_id = ?`).get(userId);
+  const company = findCompanyByUserId(db, userId);
   res.json(company ? { user, company } : { user });
 });
 
