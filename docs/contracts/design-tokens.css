@@ -1,0 +1,66 @@
+/* =====================================================================
+   CONTRACT 3/3 – design-tokens.css  (Single Source of Truth – do M1 quản lý)
+   Nguồn giá trị: M4/01_UI_Guidelines_M4.docx + Báo cáo mục 3.2.1.
+   Phiên bản: 1.0 – khóa đầu Tuần 1. Muốn sửa: báo nhóm trước, M1 cập nhật.
+
+   Cách dùng (Tailwind v4 sinh utility từ @theme):
+     - Màu:   bg-primary, text-danger, border-border, bg-status-pending-bg ...
+     - Chữ:   text-title, text-heading, text-body, text-label
+     - Bo góc: rounded-card
+     - CSS thường: var(--color-primary), var(--size-touch) ...
+   Spacing dùng thang mặc định của Tailwind (1 = 4px): p-1=4, p-2=8, p-3=12, p-4=16, p-6=24, p-8=32.
+   KHÔNG viết mã màu hex trực tiếp trong component – chỉ dùng token.
+   ===================================================================== */
+
+@theme static {
+  /* Màu chính */
+  --color-primary: #2563EB;   /* nút hành động chính, tab đang chọn */
+  --color-danger: #DC2626;    /* hủy khẩn cấp, lỗi validation, Cancelled/Rejected */
+  --color-success: #15803D;   /* thành công, Completed, đã duyệt */
+  --color-warning: #B45309;   /* chờ xử lý, Pending, tin chưa đọc */
+
+  --color-text: #1F2937;      /* chữ chính */
+  --color-text-sub: #64748B;  /* chữ phụ, chú thích */
+  --color-surface: #FFFFFF;   /* nền thẻ */
+  --color-background: #F8FAFC;/* nền màn hình */
+  --color-border: #CBD5E1;    /* viền card, đường phân cách */
+
+  /* Status chip: nền nhạt + chữ đậm + LUÔN kèm nhãn chữ (không chỉ dựa vào màu) */
+  --color-status-pending-bg: #FEF3C7;
+  --color-status-pending-fg: #92400E;
+  --color-status-active-bg: #DBEAFE;     /* Accepted, InProgress */
+  --color-status-active-fg: #1E40AF;
+  --color-status-completed-bg: #DCFCE7;
+  --color-status-completed-fg: #166534;
+  --color-status-closed-bg: #FEE2E2;     /* Cancelled, Rejected */
+  --color-status-closed-fg: #991B1B;
+
+  /* Typography: Inter, fallback Roboto/system-ui */
+  --font-sans: Inter, Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-title: 24px;     --text-title--font-weight: 700;
+  --text-heading: 20px;   --text-heading--font-weight: 600;
+  --text-body: 16px;      /* ưu tiên 16px cho ô nhập ngoài trời */
+  --text-body-sm: 14px;
+  --text-label: 14px;     --text-label--font-weight: 500;
+  --text-caption: 12px;
+
+  /* Bo góc */
+  --radius-card: 12px;
+  --radius-control: 8px;
+
+  /* Kích thước vùng chạm / control */
+  --size-touch: 44px;           /* tối thiểu cho mọi nút/ô nhập */
+  --size-touch-outdoor: 48px;   /* nút/ô nhập phân hệ Người gặp sự cố */
+  --size-emergency-button: 56px;/* nút "Gọi cứu hộ ngay" (S01) */
+  --size-action-desktop: 36px;  /* action button phân hệ Công ty */
+  --size-table-row: 48px;
+
+  /* Bố cục */
+  --layout-mobile-padding: 16px;   /* A2 – mobile 390×844 (tương thích 360×800) */
+  --layout-company-padding: 24px;  /* A3 – desktop 1440 / tablet 768 */
+  --layout-admin-padding: 32px;    /* A4 – desktop 1440 */
+  --layout-admin-sidebar: 240px;
+
+  /* Thời gian phản hồi UI */
+  --duration-toast: 3s;   /* Snackbar thành công tự ẩn */
+}
