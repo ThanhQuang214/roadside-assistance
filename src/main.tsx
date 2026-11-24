@@ -8,6 +8,8 @@ import RegisterPage from './auth/RegisterPage.tsx';
 import AccountPage from './auth/AccountPage.tsx';
 import CompanyManagePage from './company-management/CompanyManagePage.tsx';
 import CompanyApprovalPage from './company-management/CompanyApprovalPage.tsx';
+import UiKitPage from './shared/ui/UiKitPage.tsx';
+import { NetworkBanner } from './shared/ui/feedback.tsx';
 
 // Mỗi module thêm <Route> của mình vào đây (1 dòng/route), trang nằm trong thư mục module.
 // Trang cần đăng nhập bọc trong <RequireRole roles={[...]}>.
@@ -24,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <NetworkBanner />
         <Routes>
           <Route path="/" element={<RequireRole roles={['USER']}><Home /></RequireRole>} />
           <Route path="/login" element={<LoginPage />} />
@@ -31,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/account" element={<RequireRole><AccountPage /></RequireRole>} />
           <Route path="/company" element={<RequireRole roles={['COMPANY']}><CompanyManagePage /></RequireRole>} />
           <Route path="/admin" element={<RequireRole roles={['ADMIN']}><CompanyApprovalPage /></RequireRole>} />
+          <Route path="/ui-kit" element={<UiKitPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

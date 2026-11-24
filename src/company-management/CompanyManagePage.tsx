@@ -3,7 +3,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import type { FieldError } from '../auth/auth-validation.ts';
 import { apiFetch, type ApiError } from '../auth/session.tsx';
-import { ALERT_ERROR, BTN_SM, BTN_SM_PRIMARY, CARD, Field, InfoRow, SelectField, useForm, useToast } from '../shared/ui/form.tsx';
+import { ALERT_ERROR, Alert, useToast } from '../shared/ui/feedback.tsx';
+import { BTN_SM, BTN_SM_PRIMARY, Button, CARD, Field, InfoRow, SelectField, useForm } from '../shared/ui/form.tsx';
+import { LocationPicker } from '../shared/ui/map.tsx';
+import { ConfirmDialog } from '../shared/ui/modal.tsx';
 import { ApprovalChip, type ApprovalStatus } from './ApprovalChip.tsx';
 import { VEHICLE_STATUSES, VEHICLE_STATUS_LABEL, validateCompanyProfile, validateService, validateVehicle } from './company-validation.ts';
 
@@ -59,12 +62,12 @@ export default function CompanyManagePage() {
       <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
         <h1 className="text-title">Quản lý thông tin & dịch vụ cứu hộ</h1>
         {company.approvalStatus === 'Pending' && (
-          <p className="rounded-control bg-status-pending-bg p-3 text-body-sm text-status-pending-fg">
+          <Alert tone="warning">
             Hồ sơ đang chờ Quản trị viên thẩm định. Sau khi được duyệt, bạn mới quản lý được gói dịch vụ, phương tiện và nhận đơn cứu hộ.
-          </p>
+          </Alert>
         )}
         {company.approvalStatus === 'Rejected' && (
-          <p className={ALERT_ERROR}>Hồ sơ bị từ chối. Lý do: {company.rejectReason}</p>
+          <Alert>Hồ sơ bị từ chối. Lý do: {company.rejectReason}</Alert>
         )}
 
         {approved && (
@@ -114,9 +117,11 @@ function ProfilePanel({ company, readOnly, onSaved }: { company: Company; readOn
       <Field label="Tên công ty" disabled={readOnly} {...f.bind('name')} />
       <Field label="Số điện thoại công ty" type="tel" disabled={readOnly} {...f.bind('phone')} />
       <div className="md:col-span-2"><Field label="Địa chỉ trạm cứu hộ" disabled={readOnly} {...f.bind('address')} /></div>
-      {/* shortcut: nhập tọa độ tay; đổi sang component chọn vị trí trên bản đồ của M4 khi có. */}
-      <Field label="Vĩ độ trạm" type="number" step="any" disabled={readOnly} {...f.bind('stationLat')} />
-      <Field label="Kinh độ trạm" type="number" step="any" disabled={readOnly} {...f.bind('stationLng')} />
+      <div className="md:col-span-2">
+        <LocationPicker label="Vị trí trạm cứu hộ" disabled={readOnly} error={f.bind('stationLat').error}
+          value={{ lat: Number(f.values.stationLat), lng: Number(f.values.stationLng) }}
+          onChange={(p) => f.set({ stationLat: String(p.lat), stationLng: String(p.lng) })} />
+      </div>
       <Field label="Bán kính phục vụ (km)" type="number" min={1} disabled={readOnly} {...f.bind('serviceRadiusKm')} />
       <dl className="md:col-span-2">
         <InfoRow label="Số giấy phép kinh doanh" value={<a href={company.licenseFileUrl} target="_blank" className="text-primary">{company.licenseNumber}</a>} />
@@ -124,7 +129,7 @@ function ProfilePanel({ company, readOnly, onSaved }: { company: Company; readOn
       </dl>
       {!readOnly && (
         <div className="flex justify-end md:col-span-2">
-          <button className={BTN_SM_PRIMARY} disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu thay đổi'}</button>
+          <Button size="sm" loading={busy} loadingText="Đang lưu…">Lưu thay đổi</Button>
         </div>
       )}
     </form>
@@ -138,6 +143,7 @@ function ServicesPanel({ showToast }: { showToast: ShowToast }) {
   const [types, setTypes] = useState<{ code: string; name: string }[]>([]);
   const [editing, setEditing] = useState<Service | 'new' | null>(null);
   const [error, setError] = useState<{ message: string; inUse?: Service } | null>(null);
+  const [deleting, setDeleting] = useState<Service | null>(null);
 
   const load = () => apiFetch('/companies/me/services').then((d) => setItems(d.items), (e) => setError({ message: e.message }));
   useEffect(() => {
@@ -157,8 +163,7 @@ function ServicesPanel({ showToast }: { showToast: ShowToast }) {
   }
 
   async function remove(s: Service) {
-    // shortcut: hộp xác nhận của trình duyệt; đổi sang Modal của M4 khi có.
-    if (!confirm(`Xóa gói dịch vụ "${s.name}"?`)) return;
+    setDeleting(null);
     try {
       await apiFetch(`/companies/me/services/${s.id}`, { method: 'DELETE' });
       setError(null);
@@ -178,10 +183,13 @@ function ServicesPanel({ showToast }: { showToast: ShowToast }) {
         {!editing && <button className={BTN_SM_PRIMARY} onClick={() => setEditing('new')}>+ Thêm gói</button>}
       </div>
       {error && (
-        <div role="alert" className={`${ALERT_ERROR} flex items-center justify-between gap-3`}>
-          <span>{error.message}</span>
-          {error.inUse && <button className={BTN_SM} onClick={() => save(error.inUse!, false)}>Ngừng cung cấp</button>}
-        </div>
+        <Alert action={error.inUse && <button className={BTN_SM} onClick={() => save(error.inUse!, false)}>Ngừng cung cấp</button>}>
+          {error.message}
+        </Alert>
+      )}
+      {deleting && (
+        <ConfirmDialog title="Xóa gói dịch vụ" danger confirmLabel="Xóa gói" onClose={() => setDeleting(null)} onConfirm={() => remove(deleting)}
+          message={<>Xóa gói <b>{deleting.name}</b>? Gói đã có đơn cứu hộ sẽ không xóa được, khi đó hãy chuyển sang "Ngừng cung cấp".</>} />
       )}
       {editing && (
         <ServiceForm key={editing === 'new' ? 'new' : editing.id} service={editing === 'new' ? null : editing} types={types}
@@ -202,7 +210,7 @@ function ServicesPanel({ showToast }: { showToast: ShowToast }) {
                 <td className="px-4">
                   <div className="flex justify-end gap-2">
                     <button className={BTN_SM} onClick={() => setEditing(s)}>Sửa</button>
-                    <button className={`${BTN_SM} text-danger`} onClick={() => remove(s)}>Xóa</button>
+                    <button className={`${BTN_SM} text-danger`} onClick={() => setDeleting(s)}>Xóa</button>
                   </div>
                 </td>
               </tr>
@@ -293,7 +301,7 @@ function VehiclesPanel({ showToast }: { showToast: ShowToast }) {
         <h2 className="text-heading">Phương tiện cứu hộ</h2>
         {!editing && <button className={BTN_SM_PRIMARY} onClick={() => setEditing('new')}>+ Thêm phương tiện</button>}
       </div>
-      {error && <p role="alert" className={ALERT_ERROR}>{error}</p>}
+      {error && <Alert>{error}</Alert>}
       {editing && (
         <VehicleForm key={editing === 'new' ? 'new' : editing.id} vehicle={editing === 'new' ? null : editing}
           onCancel={() => setEditing(null)} onSaved={(msg) => { setEditing(null); setError(''); showToast(msg); load(); }} />
