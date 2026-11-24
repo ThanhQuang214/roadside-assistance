@@ -2,7 +2,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { validateRegister, type FieldError } from './auth-validation.ts';
-import { BTN_PRIMARY, BTN_SECONDARY, CARD, Field } from './form.tsx';
+import { BTN_PRIMARY, BTN_SECONDARY, CARD, Field } from '../shared/ui/form.tsx';
 import { ApiError, HOME_BY_ROLE, apiFetch, useAuth } from './session.tsx';
 
 type RegisterRole = 'USER' | 'COMPANY';
@@ -102,11 +102,6 @@ export default function RegisterPage() {
             <Field label="Tên công ty" {...bind('company.name')} />
             <Field label="Số điện thoại công ty" type="tel" inputMode="numeric" {...bind('company.phone')} />
             <Field label="Địa chỉ trạm cứu hộ" {...bind('company.address')} />
-            <Field label="Số giấy phép kinh doanh" {...bind('company.licenseNumber')} />
-            <Field label="Ảnh/PDF giấy phép (≤ 5 MB)" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
-              disabled={uploading} onChange={(e) => uploadLicense(e.target.files?.[0])} error={bind('company.licenseFileUrl').error} />
-            {uploading && <p className="text-body-sm text-text-sub">Đang tải lên…</p>}
-            {f['company.licenseFileUrl'] && <p className="text-body-sm text-success">Đã tải lên giấy phép.</p>}
             {/* shortcut: nhập tọa độ tay; đổi sang component chọn vị trí trên bản đồ của M4 khi có. */}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Vĩ độ trạm" type="number" step="any" {...bind('company.stationLat')} />
@@ -114,6 +109,11 @@ export default function RegisterPage() {
             </div>
             <button type="button" onClick={useCurrentLocation} className={BTN_SECONDARY}>Dùng vị trí hiện tại</button>
             <Field label="Bán kính phục vụ (km)" type="number" min={1} {...bind('company.serviceRadiusKm')} />
+            <Field label="Số giấy phép kinh doanh" {...bind('company.licenseNumber')} />
+            <Field label="Ảnh/PDF giấy phép (≤ 5 MB)" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+              disabled={uploading} onChange={(e) => uploadLicense(e.target.files?.[0])} error={bind('company.licenseFileUrl').error} />
+            {uploading && <p className="text-body-sm text-text-sub">Đang tải lên…</p>}
+            {f['company.licenseFileUrl'] && <p className="text-body-sm text-success">Đã tải lên giấy phép.</p>}
             <p className="text-body-sm text-text-sub">Hồ sơ sẽ ở trạng thái <b>Chờ duyệt</b> cho tới khi Quản trị viên thẩm định.</p>
           </fieldset>
         )}
