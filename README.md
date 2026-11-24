@@ -2,6 +2,10 @@
 
 BTL IT4490 – Thiết kế và Xây dựng Phần mềm.
 
+**Tài liệu dự án:**
+- [kehoach.md](kehoach.md) – kế hoạch triển khai, phân công M1–M4 theo tuần
+- [docs/design/M1-tuan1-kien-truc.md](docs/design/M1-tuan1-kien-truc.md) – Tech Stack, kiến trúc, class diagram State/Strategy, gói Entity
+
 **Hợp đồng giao tiếp** (Single Source of Truth – không tự sửa, báo M1):
 - [docs/contracts/schema.sql](docs/contracts/schema.sql) – cấu trúc CSDL SQLite + danh mục seed
 - [docs/contracts/api-contract.md](docs/contracts/api-contract.md) – endpoint, định dạng lỗi, validation, vòng đời đơn
@@ -24,12 +28,12 @@ npm run typecheck
 | [`src/shared/state/`](src/shared/state/) | State Pattern vòng đời đơn cứu hộ: [rescue-request-state.ts](src/shared/state/rescue-request-state.ts), [rescue-request-store.ts](src/shared/state/rescue-request-store.ts) | M1 |
 | [`src/shared/strategy/`](src/shared/strategy/) | Strategy Pattern ghép nối & ETA: [matching-strategy.ts](src/shared/strategy/matching-strategy.ts), [eta-estimator.ts](src/shared/strategy/eta-estimator.ts) | M1 |
 | [`src/shared/db.ts`](src/shared/db.ts), [`http.ts`](src/shared/http.ts) | Kết nối DB (`getDb()`), `HttpError` + định dạng lỗi chung | M1 |
-| `src/shared/ui/` | UI components dùng chung, component bản đồ | M4 |
-| `src/auth/` | Đăng ký, đăng nhập, phân quyền | M2 |
-| `src/rescue-request/` | Tạo/theo dõi/hủy đơn (M2), tiếp nhận/điều phối (M3) | M2, M3 |
-| `src/company-management/` | Hồ sơ, dịch vụ, phương tiện, Admin duyệt | M3 |
-| `src/matching-ai/` | API ghép nối, AI phân loại | M1 |
-| `src/feedback-chat/` | Đánh giá (M2), chat (M4) | M2, M4 |
+| [`src/shared/ui/`](src/shared/ui/) | UI components dùng chung, component bản đồ | M4 |
+| [`src/auth/`](src/auth/) | Đăng ký, đăng nhập, phân quyền | M2 |
+| [`src/rescue-request/`](src/rescue-request/) | Tạo/theo dõi/hủy đơn (M2), tiếp nhận/điều phối (M3) | M2, M3 |
+| [`src/company-management/`](src/company-management/) | Hồ sơ, dịch vụ, phương tiện, Admin duyệt | M3 |
+| [`src/matching-ai/`](src/matching-ai/) | API ghép nối, AI phân loại | M1 |
+| [`src/feedback-chat/`](src/feedback-chat/) | Đánh giá (M2), chat (M4) | M2, M4 |
 
 Mỗi module: API trong `*.api.ts` (Express Router, mount 1 dòng ở [src/server.ts](src/server.ts)), trang trong `*.tsx` (thêm 1 `<Route>` ở [src/main.tsx](src/main.tsx)). Import file TypeScript **kèm đuôi `.ts`/`.tsx`**.
 
