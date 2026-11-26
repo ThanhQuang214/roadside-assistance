@@ -20,7 +20,7 @@ Sơ đồ viết bằng Mermaid (dán vào <https://mermaid.live> để xuất P
 | [`src/company-management/CompanyApprovalPage.tsx`](../../src/company-management/CompanyApprovalPage.tsx) | `CompanyApprovalView` | Màn hình AD-01, route `/admin` |
 | [`src/company-management/ApprovalChip.tsx`](../../src/company-management/ApprovalChip.tsx) | – | Chip trạng thái thẩm định |
 | [`src/company-management/company.test.ts`](../../src/company-management/company.test.ts) | Test | Phân quyền, UC08-3a/3b/3c/5.1/5.2, UC10 lọc/duyệt/từ chối/409 |
-| [`src/shared/ui/form.tsx`](../../src/shared/ui/form.tsx) | (tạm, M4 thay) | `Field`, `SelectField`, `InfoRow`, `useForm`, `useToast`, class nút |
+| [`src/shared/ui/`](../../src/shared/ui/) | UI Kit của M4 | `Button`, `Field`, `Alert`, `useToast`, `ConfirmDialog`, `LocationPicker`, `MarkersMap` (xem [M4-tuan1-ui-kit.md](M4-tuan1-ui-kit.md)) |
 
 Phân quyền dùng middleware của M2: `...requireRole('COMPANY')` cho `GET /companies/me` (công ty chưa duyệt vẫn xem được hồ sơ), `...requireApprovedCompany` cho mọi API UC08 khác, `...requireRole('ADMIN')` cho toàn bộ `/admin`.
 
@@ -230,7 +230,10 @@ classDiagram
       +decide(action, reason?)
     }
     class LicensePreview
-    class RejectDialog
+    class ConfirmDialog {
+      <<UI Kit – M4>>
+      +reasonLabel?
+    }
   }
   namespace control {
     class CompanyManagementController {
@@ -288,7 +291,8 @@ classDiagram
   CompanyProfileAndServiceView *-- ServicesPanel
   CompanyProfileAndServiceView *-- VehiclesPanel
   CompanyApprovalView *-- LicensePreview
-  CompanyApprovalView *-- RejectDialog
+  CompanyApprovalView ..> ConfirmDialog : từ chối (bắt buộc lý do)
+  ServicesPanel ..> ConfirmDialog : xác nhận xóa
   ProfilePanel ..> CompanyValidator
   ServicesPanel ..> CompanyValidator
   VehiclesPanel ..> CompanyValidator
@@ -320,7 +324,7 @@ classDiagram
 ## 5. Ghi chú cho thành viên khác
 - **M1 (matching)**: ứng viên ghép nối chỉ lấy `approval_status = 'Approved'` và `rescue_services.is_active = 1`; bán kính trong `rescue_companies.service_radius_km`.
 - **M2/M3 Tuần 2**: trang điều phối đơn của công ty (UC09) đặt thêm tab hoặc route `/company/requests`; dùng `...requireApprovedCompany` và `res.locals.companyId`.
-- **M4**: `src/shared/ui/form.tsx` là bản tạm (Field, SelectField, InfoRow, useForm, useToast, class nút). Thay bằng UI Kit nhưng giữ tên export; thay ô nhập tọa độ bằng component bản đồ; thay `confirm()` khi xóa gói bằng Modal.
+- **M4** (đã làm): vị trí trạm chọn bằng `LocationPicker`, xóa gói và từ chối hồ sơ dùng `ConfirmDialog`, khung chi tiết Admin có `MarkersMap` vị trí trạm.
 
 ## 6. Việc còn mở (họp Chủ Nhật)
 1. Contract chưa có **xóa phương tiện** (`DELETE /companies/me/vehicles/:id`) và **công ty bị từ chối nộp lại hồ sơ** – cần M1 bổ sung nếu nhóm muốn.

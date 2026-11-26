@@ -168,7 +168,7 @@ Route cần đăng nhập mà chưa có token → A-01; đăng nhập xong quay 
 | Email | input email | đúng định dạng, chưa tồn tại (BE → 409) | "Email không hợp lệ." / "Email đã được sử dụng." |
 | Mật khẩu / Nhập lại | input password | ≥ 8 ký tự; hai ô khớp (chỉ FE) | "Mật khẩu phải có ít nhất 8 ký tự." / "Mật khẩu nhập lại không khớp." |
 | *Chỉ COMPANY:* Tên, SĐT, Địa chỉ trạm | input | bắt buộc; SĐT `^0\d{9}$` | "Vui lòng nhập …" |
-| Vĩ độ / Kinh độ trạm + "Dùng vị trí hiện tại" | input number + nút Secondary | lat ∈ [8, 24], lng ∈ [102, 110] | "Vui lòng xác định vị trí trạm trên lãnh thổ Việt Nam." |
+| Vị trí trạm | `LocationPicker` (chạm/kéo ghim, nút "Dùng vị trí hiện tại") | lat ∈ [8, 24], lng ∈ [102, 110] | "Vui lòng xác định vị trí trạm trên lãnh thổ Việt Nam." |
 | Bán kính phục vụ (km) | input number | > 0 | "Bán kính phục vụ phải lớn hơn 0 km." |
 | Số giấy phép | input | bắt buộc | "Vui lòng nhập số giấy phép kinh doanh." |
 | Giấy phép | input file | JPG/PNG/WebP/PDF ≤ 5 MB, upload ngay khi chọn | "File phải là JPG, PNG, WebP hoặc PDF và nhỏ hơn 5MB." |
@@ -306,5 +306,5 @@ await apiFetch('/rescue-requests', { method: 'POST', body: JSON.stringify(data) 
 
 ## 6. Việc còn mở (họp Chủ Nhật)
 1. **Sửa hồ sơ / đổi mật khẩu**: contract chưa có endpoint. Đề xuất M1 thêm `PATCH /auth/me { fullName, phone }` và `POST /auth/change-password { currentPassword, newPassword }` – M2 làm khi contract cập nhật.
-2. **Chọn vị trí trạm**: đang nhập tọa độ tay + nút "Dùng vị trí hiện tại"; thay bằng component bản đồ của M4 khi có. Ô nhập/nút cũng chuyển sang `src/shared/ui` của M4.
+2. ~~Chọn vị trí trạm bằng bản đồ~~ – đã dùng `LocationPicker` của M4.
 3. Khi deploy phải đặt biến môi trường `JWT_SECRET` (hiện có giá trị mặc định chỉ để dev). Chưa giới hạn số lần đăng nhập sai (rate limit).

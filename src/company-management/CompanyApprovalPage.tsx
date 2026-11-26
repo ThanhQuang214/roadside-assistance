@@ -1,8 +1,11 @@
 // UC10 Thẩm định đơn vị cứu hộ – CompanyApprovalView, màn hình AD-01 (docs/design/M3-tuan1-cong-ty-admin.md §3).
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { apiFetch, type ApiError } from '../auth/session.tsx';
-import { ALERT_ERROR, BTN_SM, BTN_SM_DANGER, BTN_SM_PRIMARY, CARD, Field, InfoRow, SelectField, useToast } from '../shared/ui/form.tsx';
+import { Alert, useToast } from '../shared/ui/feedback.tsx';
+import { BTN_SM, Button, CARD, Field, InfoRow, SelectField } from '../shared/ui/form.tsx';
+import { MarkersMap } from '../shared/ui/map.tsx';
+import { ConfirmDialog } from '../shared/ui/modal.tsx';
 import { APPROVAL_LABEL, ApprovalChip, type ApprovalStatus } from './ApprovalChip.tsx';
 import type { Company } from './CompanyManagePage.tsx';
 
@@ -72,11 +75,11 @@ export default function CompanyApprovalPage() {
           </div>
           <form className="flex flex-1 items-end gap-2" onSubmit={(e) => { e.preventDefault(); load(); }}>
             <div className="max-w-md flex-1"><Field label="Tìm theo tên, số giấy phép hoặc mã hồ sơ" type="search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-            <button className="h-12 rounded-control bg-primary px-4 text-body font-semibold text-surface">Tìm</button>
+            <Button>Tìm</Button>
           </form>
         </div>
 
-        {error && <p role="alert" className={ALERT_ERROR}>{error}</p>}
+        {error && <Alert>{error}</Alert>}
 
         <div className="grid items-start gap-6 xl:grid-cols-[1fr_440px]">
           <div className="overflow-x-auto rounded-card border border-border bg-surface">
@@ -117,11 +120,12 @@ export default function CompanyApprovalPage() {
                 {selected.approvalStatus === 'Approved' && <InfoRow label="Ngày duyệt" value={formatDate(selected.approvedAt)} />}
                 {selected.approvalStatus === 'Rejected' && <InfoRow label="Lý do từ chối" value={selected.rejectReason} />}
               </dl>
+              <MarkersMap height={200} markers={[{ id: selected.id, lat: selected.stationLat, lng: selected.stationLng, label: `Trạm: ${selected.address}` }]} />
               <LicensePreview url={selected.licenseFileUrl} />
               {selected.approvalStatus === 'Pending' && (
                 <div className="flex justify-end gap-2">
-                  <button className={BTN_SM_DANGER} disabled={busy} onClick={() => setRejecting(true)}>Từ chối</button>
-                  <button className={BTN_SM_PRIMARY} disabled={busy} onClick={() => decide('approve')}>{busy ? 'Đang xử lý…' : 'Duyệt hồ sơ'}</button>
+                  <Button variant="danger" size="sm" disabled={busy} onClick={() => setRejecting(true)}>Từ chối</Button>
+                  <Button size="sm" loading={busy} onClick={() => decide('approve')}>Duyệt hồ sơ</Button>
                 </div>
               )}
             </section>
@@ -131,7 +135,11 @@ export default function CompanyApprovalPage() {
         </div>
       </main>
 
-      {rejecting && <RejectDialog busy={busy} onConfirm={(reason) => decide('reject', reason)} onClose={() => setRejecting(false)} />}
+      {rejecting && (
+        <ConfirmDialog title="Từ chối hồ sơ" danger confirmLabel="Xác nhận từ chối" reasonLabel="Lý do từ chối"
+          message={<>Hồ sơ <b>{selected?.name}</b> sẽ chuyển sang Bị từ chối kèm lý do.</>}
+          onConfirm={(reason) => decide('reject', reason)} onClose={() => setRejecting(false)} />
+      )}
       {toast}
     </div>
   );
@@ -149,10 +157,9 @@ function LicensePreview({ url }: { url: string }) {
   if (state === 'loading') return <p className="text-body-sm text-text-sub">Đang tải giấy phép…</p>;
   if (state === 'error') {
     return (
-      <div role="alert" className={`${ALERT_ERROR} flex items-center justify-between gap-3`}>
-        <span>Không tải được giấy phép đính kèm.</span>
-        <button className={BTN_SM} onClick={() => setAttempt((a) => a + 1)}>Tải lại</button>
-      </div>
+      <Alert action={<button className={BTN_SM} onClick={() => setAttempt((a) => a + 1)}>Tải lại</button>}>
+        Không tải được giấy phép đính kèm.
+      </Alert>
     );
   }
   return (
@@ -162,42 +169,5 @@ function LicensePreview({ url }: { url: string }) {
         : <img src={url} alt="Giấy phép kinh doanh" className="max-h-96 w-full rounded-control border border-border object-contain" />}
       <a href={url} target="_blank" className="text-body-sm text-primary">Mở giấy phép trong tab mới</a>
     </div>
-  );
-}
-
-/** Hộp thoại bắt buộc nhập lý do từ chối (UC10-5a, 5.1). */
-function RejectDialog({ busy, onConfirm, onClose }: { busy: boolean; onConfirm: (reason: string) => Promise<void>; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const [reason, setReason] = useState('');
-  const [error, setError] = useState('');
-  useEffect(() => { ref.current?.showModal(); }, []);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!reason.trim()) return setError('Vui lòng nhập lý do từ chối.');
-    try {
-      await onConfirm(reason.trim());
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  }
-
-  return (
-    <dialog ref={ref} onClose={onClose} className="m-auto w-full max-w-md rounded-card border border-border bg-surface p-6 backdrop:bg-text/40">
-      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-        <h2 className="text-heading">Từ chối hồ sơ</h2>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="reject-reason" className="text-label">Lý do từ chối</label>
-          <textarea id="reject-reason" autoFocus maxLength={255} rows={4} value={reason} onChange={(e) => setReason(e.target.value)}
-            aria-invalid={!!error} aria-describedby={error ? 'reject-reason-err' : undefined}
-            className="rounded-control border border-border p-3 text-body focus:outline-2 focus:outline-primary aria-invalid:border-danger" />
-          {error && <p id="reject-reason-err" className="text-body-sm text-danger">{error}</p>}
-        </div>
-        <div className="flex justify-end gap-2">
-          <button type="button" className={BTN_SM} onClick={onClose}>Hủy</button>
-          <button className={BTN_SM_DANGER} disabled={busy}>Xác nhận từ chối</button>
-        </div>
-      </form>
-    </dialog>
   );
 }

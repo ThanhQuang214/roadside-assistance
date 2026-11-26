@@ -2,7 +2,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { validateRegister, type FieldError } from './auth-validation.ts';
-import { BTN_PRIMARY, BTN_SECONDARY, CARD, Field } from '../shared/ui/form.tsx';
+import { Alert } from '../shared/ui/feedback.tsx';
+import { Button, CARD, Field } from '../shared/ui/form.tsx';
+import { LocationPicker } from '../shared/ui/map.tsx';
 import { ApiError, HOME_BY_ROLE, apiFetch, useAuth } from './session.tsx';
 
 type RegisterRole = 'USER' | 'COMPANY';
@@ -15,7 +17,11 @@ export default function RegisterPage() {
   const [err, setErr] = useState<FieldError | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
-  useEffect(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), [err]);
+  useEffect(() => {
+    const el = document.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]');
+    el?.scrollIntoView({ block: 'center' });
+    el?.focus({ preventScroll: true });
+  }, [err]);
 
   const set = (name: string, value: string) => setF((prev) => ({ ...prev, [name]: value }));
   const bind = (name: string) => ({
@@ -38,13 +44,6 @@ export default function RegisterPage() {
     } finally {
       setUploading(false);
     }
-  }
-
-  function useCurrentLocation() {
-    navigator.geolocation?.getCurrentPosition(
-      (p) => setF((prev) => ({ ...prev, 'company.stationLat': p.coords.latitude.toFixed(6), 'company.stationLng': p.coords.longitude.toFixed(6) })),
-      () => setErr({ field: 'company.stationLat', message: 'Không lấy được vị trí, vui lòng nhập tọa độ.' }),
-    );
   }
 
   async function onSubmit(e: FormEvent) {
@@ -85,7 +84,7 @@ export default function RegisterPage() {
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-        {err && !err.field && <p role="alert" className="rounded-control bg-status-closed-bg p-3 text-body-sm text-status-closed-fg">{err.message}</p>}
+        {err && !err.field && <Alert>{err.message}</Alert>}
 
         <fieldset className={`${CARD} flex min-w-0 flex-col gap-4`}>
           <legend className="text-heading">{role === 'COMPANY' ? 'Người đại diện' : 'Thông tin cá nhân'}</legend>
@@ -102,12 +101,9 @@ export default function RegisterPage() {
             <Field label="Tên công ty" {...bind('company.name')} />
             <Field label="Số điện thoại công ty" type="tel" inputMode="numeric" {...bind('company.phone')} />
             <Field label="Địa chỉ trạm cứu hộ" {...bind('company.address')} />
-            {/* shortcut: nhập tọa độ tay; đổi sang component chọn vị trí trên bản đồ của M4 khi có. */}
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Vĩ độ trạm" type="number" step="any" {...bind('company.stationLat')} />
-              <Field label="Kinh độ trạm" type="number" step="any" {...bind('company.stationLng')} />
-            </div>
-            <button type="button" onClick={useCurrentLocation} className={BTN_SECONDARY}>Dùng vị trí hiện tại</button>
+            <LocationPicker label="Vị trí trạm cứu hộ" error={bind('company.stationLat').error}
+              value={f['company.stationLat'] ? { lat: Number(f['company.stationLat']), lng: Number(f['company.stationLng']) } : null}
+              onChange={(p) => setF((prev) => ({ ...prev, 'company.stationLat': String(p.lat), 'company.stationLng': String(p.lng) }))} />
             <Field label="Bán kính phục vụ (km)" type="number" min={1} {...bind('company.serviceRadiusKm')} />
             <Field label="Số giấy phép kinh doanh" {...bind('company.licenseNumber')} />
             <Field label="Ảnh/PDF giấy phép (≤ 5 MB)" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -118,7 +114,7 @@ export default function RegisterPage() {
           </fieldset>
         )}
 
-        <button className={BTN_PRIMARY} disabled={busy || uploading}>{busy ? 'Đang gửi…' : role === 'COMPANY' ? 'Gửi hồ sơ đăng ký' : 'Đăng ký'}</button>
+        <Button block loading={busy} loadingText="Đang gửi…" disabled={uploading}>{role === 'COMPANY' ? 'Gửi hồ sơ đăng ký' : 'Đăng ký'}</Button>
       </form>
       <p className="text-center text-body-sm text-text-sub">
         Đã có tài khoản? <Link to="/login" className="font-medium text-primary">Đăng nhập</Link>
