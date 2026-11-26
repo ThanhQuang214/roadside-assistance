@@ -4,6 +4,9 @@ import { errorHandler } from './shared/http.ts';
 import { authRouter } from './auth/auth.api.ts';
 import { companyRouter } from './company-management/company.api.ts';
 import { adminRouter } from './company-management/admin.api.ts';
+import { rescueRouter } from './rescue-request/rescue-request.api.ts';
+import { dispatchRouter } from './rescue-request/rescue-dispatch.api.ts';
+import { matchingAiRouter } from './matching-ai/matching.api.ts';
 
 const app = express();
 app.use(express.json());
@@ -22,10 +25,11 @@ app.get('/api/catalog/vehicle-types', (_req, res) => {
 
 // Mỗi module mount router của mình tại đây (1 dòng/module), ví dụ:
 app.use('/api', authRouter);                          // M2 – src/auth (/auth/*, /uploads)
-// app.use('/api/rescue-requests', rescueRouter);     // M2 + M3 – src/rescue-request
+app.use('/api/rescue-requests', rescueRouter);        // M2 – src/rescue-request (tạo, xem, hủy)
+app.use('/api/rescue-requests', dispatchRouter);      // M3 – src/rescue-request (nhận, từ chối, điều phối, thanh toán)
 app.use('/api/companies', companyRouter);             // M3 – src/company-management
 app.use('/api/admin', adminRouter);                   // M3 – src/company-management
-// app.use('/api', matchingAiRouter);                 // M1 – src/matching-ai
+app.use('/api', matchingAiRouter);                    // M1 – src/matching-ai (/matching/companies, /ai/classify)
 // app.use('/api', feedbackChatRouter);               // M2 + M4 – src/feedback-chat
 
 app.use('/api', (_req, res) => {

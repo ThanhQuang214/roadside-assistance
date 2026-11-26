@@ -56,7 +56,10 @@ export default function CompanyManagePage() {
           <span className="text-heading">{company.name}</span>
           <ApprovalChip status={company.approvalStatus} />
         </div>
-        <Link to="/account" className="text-body-sm font-medium text-primary">Tài khoản</Link>
+        <div className="flex items-center gap-4">
+          {approved && <Link to="/company/dispatch" className="text-body-sm font-medium text-primary">Điều phối đơn cứu hộ</Link>}
+          <Link to="/account" className="text-body-sm font-medium text-primary">Tài khoản</Link>
+        </div>
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6">

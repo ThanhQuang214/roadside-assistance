@@ -8,7 +8,17 @@
 
 export const RESCUE_STATUSES = ['Pending', 'Accepted', 'InProgress', 'Completed', 'Cancelled', 'Rejected'] as const;
 export type RescueStatus = (typeof RESCUE_STATUSES)[number];
-export type RescueAction = 'accept' | 'reject' | 'cancel' | 'start' | 'complete' | 'updateEta';
+export type RescueAction = 'accept' | 'reject' | 'cancel' | 'start' | 'complete' | 'updateEta' | 'recordPayment' | 'review';
+
+/** Nhãn tiếng Việt – dùng cho thông báo lỗi 409 và chip trạng thái (shared/ui/feedback.tsx). */
+export const RESCUE_STATUS_LABEL: Record<RescueStatus, string> = {
+  Pending: 'Chờ tiếp nhận', Accepted: 'Đã tiếp nhận', InProgress: 'Đang xử lý',
+  Completed: 'Hoàn tất', Cancelled: 'Đã hủy', Rejected: 'Bị từ chối',
+};
+const ACTION_LABEL: Record<RescueAction, string> = {
+  accept: 'nhận đơn', reject: 'từ chối đơn', cancel: 'hủy yêu cầu', start: 'bắt đầu xử lý', complete: 'hoàn tất đơn',
+  updateEta: 'cập nhật ETA', recordPayment: 'ghi nhận thanh toán', review: 'đánh giá',
+};
 
 export class InvalidTransitionError extends Error {
   readonly code = 'INVALID_STATE_TRANSITION';
@@ -16,7 +26,8 @@ export class InvalidTransitionError extends Error {
   readonly action: RescueAction;
 
   constructor(status: RescueStatus, action: RescueAction) {
-    super(`Không thể thực hiện "${action}" khi đơn cứu hộ đang ở trạng thái ${status}`);
+    // UC05-4.1 / UC09-4.1: người dùng cần biết đơn đang ở trạng thái nào để hiểu vì sao bị chặn.
+    super(`Không thể ${ACTION_LABEL[action]} vì đơn cứu hộ đang ở trạng thái "${RESCUE_STATUS_LABEL[status]}".`);
     this.status = status;
     this.action = action;
   }

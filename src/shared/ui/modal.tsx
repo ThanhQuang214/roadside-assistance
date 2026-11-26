@@ -25,12 +25,14 @@ type ConfirmProps = {
   danger?: boolean;
   /** Có giá trị → bắt buộc nhập lý do (1–255 ký tự) trước khi xác nhận, vd. "Lý do hủy", "Lý do từ chối". */
   reasonLabel?: string;
+  /** Lý do chọn nhanh (UC05 bước 2): chạm để điền vào ô lý do, vẫn sửa được. */
+  reasonOptions?: string[];
   /** Ném lỗi → hiện lỗi trong hộp thoại và giữ hộp thoại mở. */
   onConfirm: (reason: string) => unknown;
   onClose: () => void;
 };
 
-export function ConfirmDialog({ title, message, confirmLabel, danger, reasonLabel, onConfirm, onClose }: ConfirmProps) {
+export function ConfirmDialog({ title, message, confirmLabel, danger, reasonLabel, reasonOptions, onConfirm, onClose }: ConfirmProps) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -52,6 +54,16 @@ export function ConfirmDialog({ title, message, confirmLabel, danger, reasonLabe
     <Modal title={title} onClose={onClose}>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         {message && <div className="text-body text-text-sub">{message}</div>}
+        {reasonLabel && reasonOptions && (
+          <div className="flex flex-wrap gap-2" role="group" aria-label={`${reasonLabel} chọn nhanh`}>
+            {reasonOptions.map((o) => (
+              <button key={o} type="button" aria-pressed={reason === o} onClick={() => { setReason(o); setError(''); }}
+                className="min-h-9 rounded-full border border-border px-3 text-body-sm aria-pressed:border-primary aria-pressed:bg-status-active-bg aria-pressed:text-status-active-fg">
+                {o}
+              </button>
+            ))}
+          </div>
+        )}
         {reasonLabel ? (
           <TextAreaField label={reasonLabel} autoFocus maxLength={255} value={reason} onChange={(e) => setReason(e.target.value)} error={error} />
         ) : error && <p role="alert" className="text-body-sm text-danger">{error}</p>}

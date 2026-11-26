@@ -131,6 +131,7 @@ export default function UiKitPage() {
       )}
       {dialog === 'reason' && (
         <ConfirmDialog title="Hủy yêu cầu cứu hộ" danger confirmLabel="Xác nhận hủy" reasonLabel="Lý do hủy"
+          reasonOptions={['Đã tự khắc phục được', 'Đã tìm được cứu hộ khác']}
           message="Chỉ hủy được khi đơn còn Chờ tiếp nhận."
           onClose={() => setDialog(null)} onConfirm={(reason) => { setDialog(null); showToast(`Đã hủy: ${reason}`); }} />
       )}

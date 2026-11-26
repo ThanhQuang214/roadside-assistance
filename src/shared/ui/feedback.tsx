@@ -1,6 +1,6 @@
 // UI Kit (M4) – thông báo & trạng thái theo UI Guidelines 3.2.1-b, c.
 import { useEffect, useState, type ReactNode } from 'react';
-import type { RescueStatus } from '../state/rescue-request-state.ts';
+import { RESCUE_STATUS_LABEL, type RescueStatus } from '../state/rescue-request-state.ts';
 
 // ---------- Banner / thông báo inline ----------
 
@@ -38,13 +38,14 @@ export function StatusChip({ tone, children }: { tone: ChipTone; children: React
 }
 
 /** Nhãn tiếng Việt + màu cho 6 trạng thái đơn cứu hộ (api-contract §2). */
+const L = RESCUE_STATUS_LABEL;
 export const RESCUE_STATUS_UI: Record<RescueStatus, { label: string; tone: ChipTone }> = {
-  Pending: { label: 'Chờ tiếp nhận', tone: 'pending' },
-  Accepted: { label: 'Đã tiếp nhận', tone: 'active' },
-  InProgress: { label: 'Đang xử lý', tone: 'active' },
-  Completed: { label: 'Hoàn tất', tone: 'completed' },
-  Cancelled: { label: 'Đã hủy', tone: 'closed' },
-  Rejected: { label: 'Bị từ chối', tone: 'closed' },
+  Pending: { label: L.Pending, tone: 'pending' },
+  Accepted: { label: L.Accepted, tone: 'active' },
+  InProgress: { label: L.InProgress, tone: 'active' },
+  Completed: { label: L.Completed, tone: 'completed' },
+  Cancelled: { label: L.Cancelled, tone: 'closed' },
+  Rejected: { label: L.Rejected, tone: 'closed' },
 };
 
 export function RescueStatusChip({ status }: { status: RescueStatus }) {

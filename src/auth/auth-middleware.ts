@@ -40,11 +40,15 @@ export function requireRole(...roles: Role[]): RequestHandler[] {
   }];
 }
 
-/** COMPANY đã được Admin duyệt; gán res.locals.companyId. Chưa duyệt → 403 COMPANY_NOT_APPROVED. */
-export const requireApprovedCompany: RequestHandler[] = [...requireRole('COMPANY'), (_req, res, next) => {
+/** Chạy sau requireAuth: nếu là COMPANY thì phải đã được duyệt (gán res.locals.companyId); vai trò khác cho qua. */
+export const checkApprovedCompany: RequestHandler = (_req, res, next) => {
+  if (getAuth(res).role !== 'COMPANY') return next();
   const row = getDb().prepare('SELECT id, approval_status AS status FROM rescue_companies WHERE user_id = ?')
     .get(getAuth(res).userId) as { id: number; status: string } | undefined;
   if (row?.status !== 'Approved') throw new HttpError(403, 'COMPANY_NOT_APPROVED', 'Hồ sơ công ty chưa được duyệt.');
   res.locals.companyId = row.id;
   next();
-}];
+};
+
+/** COMPANY đã được Admin duyệt; gán res.locals.companyId. Chưa duyệt → 403 COMPANY_NOT_APPROVED. */
+export const requireApprovedCompany: RequestHandler[] = [...requireRole('COMPANY'), checkApprovedCompany];

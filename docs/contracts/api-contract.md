@@ -1,6 +1,7 @@
 # CONTRACT 2/3 – api-contract.md (Single Source of Truth – do M1 quản lý)
 
-**Hệ thống hỗ trợ sự cố xe trên đường** · Phiên bản 1.0 – khóa đầu Tuần 1.
+**Hệ thống hỗ trợ sự cố xe trên đường** · Phiên bản 1.1 – Tuần 2 (1.0 khóa đầu Tuần 1).
+**1.1:** chỉ làm rõ, không đổi tên trường/endpoint – bán kính ghép nối và nguồn ETA (§3.3), `/ai/classify` tạm trả 503 tới Tuần 3, ràng buộc `photoUrl` (§3.4), thông báo 409 tiếng Việt và 409 khi ghi thanh toán ngoài Completed (§2).
 Muốn đổi tên trường / thêm endpoint ngoài module của mình: báo nhóm trước, M1 cập nhật file này rồi mới code.
 
 Bảng dữ liệu tương ứng: [schema.sql](schema.sql). Mã Actor/UC theo báo cáo (A0–A4, S1–S2, UC01–UC12).
@@ -68,7 +69,7 @@ Trạng thái: `Pending` → `Accepted` → `InProgress` → `Completed`; nhánh
 | Completed | `canRecordPayment()` = true | – | COMPANY | `PUT /rescue-requests/:id/payment` |
 | Completed | `canReview()` = true | – | USER | `POST /rescue-requests/:id/review` |
 
-Mọi ô khác → `409 INVALID_STATE_TRANSITION`. Cách dùng trong controller (bắt buộc để chống xung đột hủy/nhận cùng lúc):
+Mọi ô khác (kể cả `PUT …/payment` khi đơn chưa Completed) → `409 INVALID_STATE_TRANSITION`, `message` tiếng Việt nêu trạng thái hiện tại để UI hiển thị thẳng, ví dụ *"Không thể hủy yêu cầu vì đơn cứu hộ đang ở trạng thái "Đã tiếp nhận"."*; `details = { status, action }`. Cách dùng trong controller (bắt buộc để chống xung đột hủy/nhận cùng lúc):
 
 ```ts
 const ctx = loadRescueRequest(db, id);          // null → 404
@@ -101,17 +102,17 @@ if (!saveRescueRequest(db, ctx, expected)) throw new InvalidTransitionError(...)
 ### 3.3 Ghép nối & AI – M1 (`src/matching-ai`) · UC03 bước 4–5
 | Method | Path | Quyền | Input | Response 200 |
 |---|---|---|---|---|
-| POST | `/ai/classify` | USER | `{ description }` | `{ incidentType, urgency, suggestedServiceTypeCode, confidence, source: "AI" }` hoặc `503 AI_UNAVAILABLE` |
+| POST | `/ai/classify` | USER | `{ description }` | `{ incidentType, urgency, suggestedServiceTypeCode, confidence, source: "AI" }` hoặc `503 AI_UNAVAILABLE` – *Tuần 2 luôn trả 503 (S1 làm ở Tuần 3), UI chạy nhánh tự chọn dịch vụ* |
 | GET | `/matching/companies` | USER | query `lat, lng, serviceTypeCode, radiusKm=20, strategy=nearest\|rating\|weighted` | `{ radiusKm, strategy, items: CompanyCandidate[] }` – rỗng thì UI gợi ý `radiusKm + 10` |
 
 `incidentType` ∈ `FLAT_TIRE, DEAD_BATTERY, OUT_OF_FUEL, ENGINE_FAILURE, ACCIDENT, LOCKOUT, OTHER` · `urgency` ∈ `LOW, MEDIUM, HIGH`.
 
-`CompanyCandidate = { companyId, companyName, serviceId, serviceName, price, distanceKm, etaMinutes, rating (null nếu chưa có), ratingCount }` – chỉ gồm công ty `Approved`, gói `isActive`, trong `serviceRadiusKm` của công ty và `radiusKm` của truy vấn. Tuần 1: ETA ước tính theo khoảng cách đường chim bay; Tuần 2 thay bằng MapsSubsystem (không đổi contract).
+`CompanyCandidate = { companyId, companyName, serviceId, serviceName, price, distanceKm, etaMinutes, rating (null nếu chưa có), ratingCount }` – chỉ gồm công ty `Approved`, gói `isActive`, có trạm cách điểm sự cố (đường chim bay) không quá `min(serviceRadiusKm của công ty, radiusKm của truy vấn)`; `radiusKm` ∈ (0, 200]. Từ Tuần 2 `distanceKm` = quãng đường lái xe và `etaMinutes = ceil(10 + phút lái × 1.5)` lấy từ MapsSubsystem (OSRM); Maps lỗi/quá 3 giây → ước tính đường chim bay như Tuần 1 (xem [M1-tuan2](../design/M1-tuan2-ghep-noi-maps.md)).
 
 ### 3.4 Yêu cầu cứu hộ – M2 phía USER, M3 phía COMPANY (`src/rescue-request`) · UC03, UC04, UC05, UC09
 | Method | Path | Quyền | Body | Response |
 |---|---|---|---|---|
-| POST | `/rescue-requests` | USER | `{ companyId, serviceId, vehicleTypeCode, lat, lng, address?, description, contactPhone, photoUrl?, classification: { incidentType, urgency, confidence?, source: "AI"\|"MANUAL" } }` | `201 { request: RescueRequest }` – server tự tính lại `distanceKm`, `estimatedPrice`; công ty phải `Approved`, gói thuộc công ty và `isActive` |
+| POST | `/rescue-requests` | USER | `{ companyId, serviceId, vehicleTypeCode, lat, lng, address?, description, contactPhone, photoUrl?, classification: { incidentType, urgency, confidence?, source: "AI"\|"MANUAL" } }` | `201 { request: RescueRequest }` – server tự tính lại `distanceKm`, `estimatedPrice`; công ty phải `Approved`, gói thuộc công ty và `isActive`; `photoUrl` phải là URL do `POST /uploads` trả về (`/api/uploads/…jpg\|png\|webp`) |
 | GET | `/rescue-requests` | USER (đơn của mình) / COMPANY (đơn giao cho mình) | query `status?` | `{ items: RescueRequest[] }` mới nhất trước |
 | GET | `/rescue-requests/:id` | chủ đơn / công ty được giao | – | `{ request: RescueRequest }` – client polling 5 giây/lần |
 | POST | `/rescue-requests/:id/cancel` | USER | `{ reason }` | `200 { request }` |

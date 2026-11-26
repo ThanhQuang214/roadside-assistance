@@ -1,6 +1,6 @@
 /**
- * Strategy Pattern – ước tính khoảng cách / ETA. Tuần 1 dùng đường chim bay;
- * Tuần 2 thêm MapsEtaEstimator (gọi MapsSubsystem/S2) cài cùng interface, không đổi nơi gọi.
+ * Strategy Pattern – ước tính khoảng cách / ETA. AverageSpeedEtaEstimator dùng đường chim bay (không cần mạng);
+ * MapsEtaEstimator (src/matching-ai/maps-subsystem.ts) gọi MapsSubsystem/S2, cài cùng interface.
  */
 
 export interface GeoPoint {
@@ -8,9 +8,13 @@ export interface GeoPoint {
   lng: number;
 }
 
+export type Estimate = { distanceKm: number; etaMinutes: number };
+
 export interface IEtaEstimator {
   /** Trả về khoảng cách (km) và ETA (phút, làm tròn lên) từ trạm công ty tới điểm sự cố. */
-  estimate(from: GeoPoint, to: GeoPoint): Promise<{ distanceKm: number; etaMinutes: number }>;
+  estimate(from: GeoPoint, to: GeoPoint): Promise<Estimate>;
+  /** Như estimate cho nhiều trạm cùng lúc (1 lần gọi Maps cho cả danh sách ghép nối); kết quả cùng thứ tự `from`. */
+  estimateMany(from: GeoPoint[], to: GeoPoint): Promise<Estimate[]>;
 }
 
 const EARTH_RADIUS_KM = 6371;
@@ -26,8 +30,8 @@ export function haversineKm(a: GeoPoint, b: GeoPoint): number {
 
 /**
  * ETA = thời gian chuẩn bị + quãng đường × hệ số đường vòng / vận tốc trung bình.
- * shortcut: tham số mặc định là giả định nội đô (30 km/h, đường thực ≈ 1.3 × chim bay, chuẩn bị 10 phút),
- * thay bằng MapsEtaEstimator ở Tuần 2.
+ * shortcut: tham số mặc định là giả định nội đô (30 km/h, đường thực ≈ 1.3 × chim bay, chuẩn bị 10 phút);
+ * chỉ dùng khi chạy offline (MAPS_PROVIDER=offline) hoặc làm dự phòng khi Maps lỗi.
  */
 export class AverageSpeedEtaEstimator implements IEtaEstimator {
   readonly speedKmh: number;
@@ -44,5 +48,9 @@ export class AverageSpeedEtaEstimator implements IEtaEstimator {
     const distanceKm = haversineKm(from, to) * this.detourFactor;
     const etaMinutes = Math.ceil(this.dispatchMinutes + (distanceKm / this.speedKmh) * 60);
     return { distanceKm: Math.round(distanceKm * 10) / 10, etaMinutes };
+  }
+
+  estimateMany(from: GeoPoint[], to: GeoPoint) {
+    return Promise.all(from.map((f) => this.estimate(f, to)));
   }
 }
