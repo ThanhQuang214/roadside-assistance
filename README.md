@@ -6,6 +6,7 @@ BTL IT4490 – Thiết kế và Xây dựng Phần mềm.
 - [kehoach.md](kehoach.md) – kế hoạch triển khai, phân công M1–M4 theo tuần
 - [docs/design/M1-tuan1-kien-truc.md](docs/design/M1-tuan1-kien-truc.md) – Tech Stack, kiến trúc, class diagram State/Strategy, gói Entity
 - [docs/design/M2-tuan1-xac-thuc.md](docs/design/M2-tuan1-xac-thuc.md) – Đăng ký/Đăng nhập/phân quyền: sequence, UI spec, design class, cách dùng middleware
+- [docs/design/M3-tuan1-cong-ty-admin.md](docs/design/M3-tuan1-cong-ty-admin.md) – Quản lý dịch vụ/phương tiện (UC08), Admin thẩm định (UC10): sequence, UI spec, design class
 
 **Hợp đồng giao tiếp** (Single Source of Truth – không tự sửa, báo M1):
 - [docs/contracts/schema.sql](docs/contracts/schema.sql) – cấu trúc CSDL SQLite + danh mục seed
@@ -30,10 +31,10 @@ npm run create-admin -- admin@example.com matkhau123   # tạo tài khoản ADMI
 | [`src/shared/state/`](src/shared/state/) | State Pattern vòng đời đơn cứu hộ: [rescue-request-state.ts](src/shared/state/rescue-request-state.ts), [rescue-request-store.ts](src/shared/state/rescue-request-store.ts) | M1 |
 | [`src/shared/strategy/`](src/shared/strategy/) | Strategy Pattern ghép nối & ETA: [matching-strategy.ts](src/shared/strategy/matching-strategy.ts), [eta-estimator.ts](src/shared/strategy/eta-estimator.ts) | M1 |
 | [`src/shared/db.ts`](src/shared/db.ts), [`http.ts`](src/shared/http.ts) | Kết nối DB (`getDb()`), `HttpError` + định dạng lỗi chung | M1 |
-| [`src/shared/ui/`](src/shared/ui/) | UI components dùng chung, component bản đồ | M4 |
+| [`src/shared/ui/`](src/shared/ui/) | UI components dùng chung, component bản đồ ([form.tsx](src/shared/ui/form.tsx) là bản tạm của M2/M3) | M4 |
 | [`src/auth/`](src/auth/) | Đăng ký, đăng nhập, phân quyền: [auth-middleware.ts](src/auth/auth-middleware.ts) (`requireRole`, `requireApprovedCompany`), [session.tsx](src/auth/session.tsx) (`apiFetch`, `RequireRole`) | M2 |
 | [`src/rescue-request/`](src/rescue-request/) | Tạo/theo dõi/hủy đơn (M2), tiếp nhận/điều phối (M3) | M2, M3 |
-| [`src/company-management/`](src/company-management/) | Hồ sơ, dịch vụ, phương tiện, Admin duyệt | M3 |
+| [`src/company-management/`](src/company-management/) | Hồ sơ, dịch vụ, phương tiện ([company.api.ts](src/company-management/company.api.ts), trang `/company`), Admin duyệt ([admin.api.ts](src/company-management/admin.api.ts), trang `/admin`) | M3 |
 | [`src/matching-ai/`](src/matching-ai/) | API ghép nối, AI phân loại | M1 |
 | [`src/feedback-chat/`](src/feedback-chat/) | Đánh giá (M2), chat (M4) | M2, M4 |
 

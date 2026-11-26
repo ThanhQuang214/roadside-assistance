@@ -1,7 +1,7 @@
 // UC02 Đăng nhập – màn hình A-01 (docs/design/M2-tuan1-xac-thuc.md §3).
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { BTN_PRIMARY, CARD, Field } from './form.tsx';
+import { BTN_PRIMARY, CARD, Field } from '../shared/ui/form.tsx';
 import { HOME_BY_ROLE, useAuth } from './session.tsx';
 
 export default function LoginPage() {

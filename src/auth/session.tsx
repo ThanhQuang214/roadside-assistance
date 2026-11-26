@@ -7,7 +7,6 @@ import { Navigate, useLocation } from 'react-router';
 import type { Role } from './auth-validation.ts';
 
 export type User = { id: number; email: string; phone: string; fullName: string; role: Role; createdAt: string };
-export type Company = Record<string, any> & { approvalStatus: 'Pending' | 'Approved' | 'Rejected' };
 
 export const ROLE_LABEL: Record<Role, string> = { USER: 'Người gặp sự cố', COMPANY: 'Công ty cứu hộ', ADMIN: 'Quản trị viên' };
 /** Trang chính của từng vai trò sau khi đăng nhập (UC02: "vào đúng giao diện theo vai trò"). */
@@ -53,7 +52,6 @@ export async function apiFetch<T = any>(path: string, init: RequestInit = {}): P
 
 type Session = {
   user: User | null;
-  company: Company | null;
   loading: boolean;
   login(email: string, password: string): Promise<User>;
   logout(): void;
@@ -63,15 +61,15 @@ const SessionContext = createContext<Session | null>(null);
 export const useAuth = () => useContext(SessionContext)!;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState({ user: null as User | null, company: null as Company | null, loading: !!localStorage.getItem(TOKEN_KEY) });
+  const [state, setState] = useState({ user: null as User | null, loading: !!localStorage.getItem(TOKEN_KEY) });
 
   async function reload() {
     const d = await apiFetch('/auth/me');
-    setState({ user: d.user, company: d.company ?? null, loading: false });
+    setState({ user: d.user, loading: false });
     return d.user as User;
   }
   useEffect(() => {
-    if (state.loading) reload().catch(() => setState({ user: null, company: null, loading: false }));
+    if (state.loading) reload().catch(() => setState({ user: null, loading: false }));
   }, []);
 
   const session: Session = {
@@ -83,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     logout() {
       localStorage.removeItem(TOKEN_KEY);
-      setState({ user: null, company: null, loading: false });
+      setState({ user: null, loading: false });
     },
   };
   return <SessionContext value={session}>{children}</SessionContext>;
