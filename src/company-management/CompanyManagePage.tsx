@@ -151,7 +151,7 @@ function ServicesPanel({ showToast }: { showToast: ShowToast }) {
   const load = () => apiFetch('/companies/me/services').then((d) => setItems(d.items), (e) => setError({ message: e.message }));
   useEffect(() => {
     load();
-    apiFetch('/catalog/service-types').then((d) => setTypes(d.items), () => {});
+    apiFetch('/catalog/service-types').then((d) => setTypes(d.items), (e) => setError({ message: e.message }));
   }, []);
 
   async function save(s: Service, isActive: boolean) {
@@ -166,14 +166,16 @@ function ServicesPanel({ showToast }: { showToast: ShowToast }) {
   }
 
   async function remove(s: Service) {
-    setDeleting(null);
     try {
       await apiFetch(`/companies/me/services/${s.id}`, { method: 'DELETE' });
+      setDeleting(null);
       setError(null);
       showToast('Đã xóa gói dịch vụ');
       load();
     } catch (e) {
-      setError({ message: (e as Error).message, inUse: (e as ApiError).code === 'CONFLICT' ? s : undefined });
+      if ((e as ApiError).code !== 'CONFLICT') throw e;
+      setDeleting(null);
+      setError({ message: (e as Error).message, inUse: s });
     }
   }
 

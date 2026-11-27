@@ -44,14 +44,15 @@ export default function CompanyApprovalPage() {
       setRejecting(false);
       setError('');
       showToast(action === 'approve' ? `Đã duyệt "${company.name}"` : `Đã từ chối "${company.name}"`);
+      load();
     } catch (e) {
       if ((e as ApiError).field === 'reason') throw e;
       setRejecting(false);
       setError((e as Error).message);
       apiFetch(`/admin/companies/${id}`).then((d) => setSelected(d.company), () => setSelected(null));
+      load();
     } finally {
       setBusy(false);
-      load();
     }
   }
 

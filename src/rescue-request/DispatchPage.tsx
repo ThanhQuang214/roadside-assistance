@@ -59,6 +59,7 @@ export default function DispatchPage() {
       setDetail(request);
       setError('');
       showToast(success);
+      load(false);
       return true;
     } catch (e) {
       if ((e as ApiError).field) throw e;
@@ -66,10 +67,10 @@ export default function DispatchPage() {
       // Mất mạng/lỗi máy chủ: form hoặc modal giữ nguyên dữ liệu để gửi lại.
       // Xung đột 409: đóng modal theo UI Spec rồi tải trạng thái mới nhất.
       if (keepInputOnFailure && (e as ApiError).status !== 409) throw e;
+      load(false);
       return false;
     } finally {
       setBusy(false);
-      load(false);
     }
   }
 
