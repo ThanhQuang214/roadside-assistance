@@ -128,11 +128,31 @@ const [pos, setPos] = useState<LatLng | null>(null);
 
 ## 5. Mockup high-fidelity
 
-Wireframe low-fidelity ở Figma: [M4 – Roadside Assistance – Low-Fidelity Mobile Wireframes](https://www.figma.com/design/VWHGe3zp03lWKj1ZTteq7l/M4---Roadside-Assistance---Low-Fidelity-Mobile-Wireframes).
+File Figma: [M4 – Roadside Assistance](https://www.figma.com/design/VWHGe3zp03lWKj1ZTteq7l/M4---Roadside-Assistance---Low-Fidelity-Mobile-Wireframes).
 
-Bản hi-fi trên Figma cần M4 dựng tay. Nên tạo các style trong Figma trùng tên token ở mục 4 (Color: primary, danger…; Text: title, heading, body, label) và component trùng tên với code (Button / Field / StatusChip / Alert / ConfirmDialog / LocationPicker), để mockup và code nói cùng một ngôn ngữ. Các màn đã chạy thật và chụp được ngay: A-01, A-02, A-03 (M2), C-01, AD-01 (M3), `/ui-kit`. Các màn Tuần 2: S01–S04 (M2), bảng điều phối (M3).
+Trong file có ba phần:
 
-## 6. Việc còn mở
-1. **Tìm theo địa chỉ** (gõ địa chỉ để ra tọa độ) cần dịch vụ geocoding. Nên làm cùng MapsSubsystem của M1 ở Tuần 2, rồi thêm ô tìm vào `LocationPicker`.
-2. **Lưu bản nháp khi mất mạng** (báo cáo 3.2.1-c) thuộc form S02, M2 làm ở Tuần 2. `NetworkBanner` hiện chỉ báo trạng thái mạng.
-3. Bản đồ dùng tile công khai `tile.openstreetmap.org`, chỉ phù hợp cho demo hoặc lưu lượng thấp theo chính sách sử dụng của OSM.
+- `Page 1`: 4 wireframe low-fidelity mobile ban đầu.
+- `01 Design System`: token màu, typography và component Button / Field / StatusChip / Alert / ConfirmDialog / LocationPicker bám theo mục 4.
+- `02 High-fidelity — Tuần 1`: A-01 đăng nhập, A-02 đăng ký User/Company, A-03 tài khoản, C-01 hồ sơ công ty và AD-01 thẩm định đơn vị.
+
+Bản high-fidelity hiện là **bản nháp cần căn chỉnh lần cuối**: chuẩn hóa control mobile về cùng chiều rộng `358 px`, sửa auto-layout/`Fill container` và cân lại hai màn desktop trước khi xuất ảnh cho báo cáo. Không dùng bản nháp này làm ảnh nộp cuối cùng cho tới khi hoàn tất việc căn chỉnh.
+
+## 6. Kiểm thử UI Kit
+
+Ngày 27/11/2026 đã kiểm tra thủ công trang `/ui-kit`: Button, form control, Alert, status chip, toast, modal, GPS, marker, offline banner và responsive hoạt động đúng đặc tả.
+
+Automated test nằm tại [`src/shared/ui/ui-kit.test.tsx`](../../src/shared/ui/ui-kit.test.tsx), chạy bằng Vitest + Testing Library trong môi trường jsdom:
+
+```bash
+npm run test:ui   # chỉ UI Kit M4
+npm run test:all  # 30 test backend + 9 test UI
+```
+
+Kết quả ngày 27/11/2026: **9/9 UI test pass**, **30/30 backend test pass**, `npm run typecheck` và `npm run build` đều pass. Phạm vi automated test gồm loading/disabled của Button, liên kết label–error–ARIA của form, role của Alert, nhãn chữ của status chip và validation/error bất đồng bộ của `ConfirmDialog`.
+
+## 7. Việc còn mở
+1. **Căn chỉnh bản high-fidelity Figma** và chụp lại ảnh sau khi mọi control mobile thẳng mép, desktop cân cột.
+2. **Tìm theo địa chỉ** (gõ địa chỉ để ra tọa độ) cần dịch vụ geocoding. Nên làm cùng MapsSubsystem của M1 ở Tuần 2, rồi thêm ô tìm vào `LocationPicker`.
+3. **Lưu bản nháp khi mất mạng** (báo cáo 3.2.1-c) thuộc form S02, M2 làm ở Tuần 2. `NetworkBanner` hiện chỉ báo trạng thái mạng.
+4. Bản đồ dùng tile công khai `tile.openstreetmap.org`, chỉ phù hợp cho demo hoặc lưu lượng thấp theo chính sách sử dụng của OSM.

@@ -46,7 +46,9 @@ export default function TrackRequestPage() {
     return (
       <main className="mx-auto flex max-w-md flex-col gap-4 p-4">
         <Link to="/" className="text-body-sm text-primary">← Trang chính</Link>
-        {loadError ? <Alert>{loadError}</Alert> : <p className="text-text-sub">Đang tải…</p>}
+        {loadError
+          ? <Alert action={<Button size="sm" variant="secondary" onClick={load}>Thử lại</Button>}>{loadError}</Alert>
+          : <p className="text-text-sub">Đang tải…</p>}
       </main>
     );
   }
@@ -61,7 +63,11 @@ export default function TrackRequestPage() {
       </div>
       {justCreated && req.status === 'Pending' && <Alert tone="success">Đã gửi yêu cầu cứu hộ tới {c.name}.</Alert>}
       {error && <Alert>{error}</Alert>}
-      {loadError && <Alert tone="warning">Chưa cập nhật được trạng thái mới nhất: {loadError}</Alert>}
+      {loadError && (
+        <Alert tone="warning" action={<Button size="sm" variant="secondary" onClick={load}>Thử lại</Button>}>
+          Chưa cập nhật được trạng thái mới nhất: {loadError}
+        </Alert>
+      )}
 
       <StatusPanel req={req} />
 

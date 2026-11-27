@@ -1,6 +1,6 @@
 // UC03 Yêu cầu cứu hộ khẩn cấp – RescueRequestForm: S02 Tạo yêu cầu → S03 Chọn đơn vị cứu hộ (docs/design/M2-tuan2-yeu-cau-cuu-ho.md §3).
 // Hai bước nằm chung một component nên "Quay lại" và lỗi gửi đơn không làm mất dữ liệu đã nhập (UC03-7.1).
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { apiFetch, useAuth, type ApiError } from '../auth/session.tsx';
 import { Alert } from '../shared/ui/feedback.tsx';
@@ -23,6 +23,8 @@ export default function CreateRequestPage() {
   const [pos, setPos] = useState<LatLng | null>(null);
   const [vehicleTypes, setVehicleTypes] = useState<CatalogItem[]>([]);
   const [serviceTypes, setServiceTypes] = useState<CatalogItem[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [classification, setClassification] = useState<Classification | null>(null);
@@ -35,21 +37,38 @@ export default function CreateRequestPage() {
   const [selected, setSelected] = useState<CompanyCandidate | null>(null);
   const [pickError, setPickError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const matchingRequest = useRef(0);
 
-  useEffect(() => {
-    apiFetch('/catalog/vehicle-types').then((d) => setVehicleTypes(d.items));
-    apiFetch('/catalog/service-types').then((d) => setServiceTypes(d.items));
-  }, []);
+  async function loadCatalogs() {
+    setCatalogLoading(true);
+    setCatalogError('');
+    try {
+      const [vehicles, services] = await Promise.all([
+        apiFetch('/catalog/vehicle-types'),
+        apiFetch('/catalog/service-types'),
+      ]);
+      setVehicleTypes(vehicles.items);
+      setServiceTypes(services.items);
+    } catch (e) {
+      setCatalogError((e as Error).message);
+    } finally {
+      setCatalogLoading(false);
+    }
+  }
+
+  useEffect(() => { loadCatalogs(); }, []);
 
   // UC03 bước 5 / 5.1 / 5.2: đổi dịch vụ, cách sắp xếp hoặc bán kính → tải lại danh sách gợi ý.
   useEffect(() => {
     if (step !== 'pick' || !serviceTypeCode || !pos) return;
+    const requestId = ++matchingRequest.current;
     setCandidates(null);
+    setSelected(null);
     setPickError('');
     const q = new URLSearchParams({ lat: String(pos.lat), lng: String(pos.lng), serviceTypeCode, radiusKm: String(radiusKm), strategy });
     apiFetch(`/matching/companies?${q}`).then(
-      (d) => { setCandidates(d.items); setSelected((s) => d.items.find((c: CompanyCandidate) => c.serviceId === s?.serviceId) ?? null); },
-      (e) => setPickError(e.message));
+      (d) => { if (requestId === matchingRequest.current) setCandidates(d.items); },
+      (e) => { if (requestId === matchingRequest.current) setPickError(e.message); });
   }, [step, serviceTypeCode, strategy, radiusKm, pos]);
 
   const draft = () => ({ ...values, lat: pos?.lat, lng: pos?.lng, photoUrl: values.photoUrl || undefined, address: values.address || undefined });
@@ -123,6 +142,7 @@ export default function CreateRequestPage() {
       <main className="mx-auto flex max-w-md flex-col gap-4 p-4">
         <Link to="/" className="text-body-sm text-primary">← Trang chính</Link>
         <h1 className="text-title">Tạo yêu cầu cứu hộ</h1>
+        {catalogError && <Alert action={<Button size="sm" variant="secondary" onClick={loadCatalogs}>Thử lại</Button>}>{catalogError}</Alert>}
         <form onSubmit={analyze} noValidate className="flex flex-col gap-4">
           <LocationPicker label="Vị trí sự cố" value={pos} onChange={setPos} autoLocate height={240}
             error={err?.field === 'lat' ? err.message : undefined} />
@@ -139,6 +159,7 @@ export default function CreateRequestPage() {
                 </label>
               ))}
             </div>
+            {catalogLoading && <p className="text-body-sm text-text-sub">Đang tải danh mục phương tiện…</p>}
             {err?.field === 'vehicleTypeCode' && <p className="text-body-sm text-danger">{err.message}</p>}
           </fieldset>
 
@@ -159,7 +180,7 @@ export default function CreateRequestPage() {
             )}
           </div>
 
-          <Button block loading={analyzing} loadingText="Đang phân tích…" disabled={uploading}>Phân tích & Tìm cứu hộ</Button>
+          <Button block loading={analyzing} loadingText="Đang phân tích…" disabled={uploading || catalogLoading || !!catalogError}>Phân tích & Tìm cứu hộ</Button>
         </form>
       </main>
     );
@@ -199,7 +220,9 @@ export default function CreateRequestPage() {
       {!serviceTypeCode && <p className="text-center text-text-sub">Chọn loại dịch vụ để xem đơn vị cứu hộ phù hợp.</p>}
       {serviceTypeCode && !candidates && !pickError && <p className="text-center text-text-sub">Đang tìm đơn vị cứu hộ gần bạn…</p>}
       {candidates?.length === 0 && (
-        <Alert tone="warning" action={<Button size="sm" variant="secondary" onClick={() => setRadiusKm((r) => r + 10)}>Mở rộng lên {radiusKm + 10} km</Button>}>
+        <Alert tone="warning" action={radiusKm < 200
+          ? <Button size="sm" variant="secondary" onClick={() => setRadiusKm((r) => Math.min(r + 10, 200))}>Mở rộng lên {Math.min(radiusKm + 10, 200)} km</Button>
+          : undefined}>
           Không có đơn vị cứu hộ khả dụng trong bán kính {radiusKm} km.
         </Alert>
       )}

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { apiFetch, useAuth } from '../auth/session.tsx';
 import { Alert, RescueStatusChip } from '../shared/ui/feedback.tsx';
-import { CARD, buttonClass } from '../shared/ui/form.tsx';
+import { Button, CARD, buttonClass } from '../shared/ui/form.tsx';
 import { formatDateTime } from '../shared/ui/format.ts';
 import type { RescueRequest } from './rescue-store.ts';
 import { ACTIVE_STATUSES } from './rescue-validation.ts';
@@ -13,9 +13,17 @@ export default function RescueHomePage() {
   const [items, setItems] = useState<RescueRequest[] | null>(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    apiFetch('/rescue-requests').then((d) => setItems(d.items), (e) => setError(e.message));
-  }, []);
+  async function load() {
+    try {
+      const data = await apiFetch('/rescue-requests');
+      setItems(data.items);
+      setError('');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
 
   const active = items?.filter((r) => ACTIVE_STATUSES.includes(r.status)) ?? [];
   const history = items?.filter((r) => !ACTIVE_STATUSES.includes(r.status)) ?? [];
@@ -33,7 +41,7 @@ export default function RescueHomePage() {
         <Link to="/requests/new" className={`${buttonClass('danger', 'xl')} w-full`}>Gọi cứu hộ ngay</Link>
       </section>
 
-      {error && <Alert>{error}</Alert>}
+      {error && <Alert action={<Button size="sm" variant="secondary" onClick={load}>Thử lại</Button>}>{error}</Alert>}
 
       {active.length > 0 && (
         <section className="flex flex-col gap-2" aria-label="Yêu cầu đang xử lý">
