@@ -5,6 +5,7 @@ import { getDb } from '../shared/db.ts';
 import { HttpError } from '../shared/http.ts';
 import { RESCUE_STATUSES, type RescueStatus } from '../shared/state/rescue-request-state.ts';
 import { getAuth, requireRole } from '../auth/auth-middleware.ts';
+import { haversineKm } from '../shared/strategy/eta-estimator.ts';
 import { getEtaEstimator } from '../matching-ai/maps-subsystem.ts';
 import { SUGGESTED_SERVICE_TYPE } from '../matching-ai/incident-types.ts';
 import { check, findRequest, listRequests, requireRequestViewer, transition } from './rescue-store.ts';
@@ -22,14 +23,19 @@ rescueRouter.post('/', ...requireRole('USER'), async (req, res) => {
   const vehicleType = db.prepare('SELECT id FROM vehicle_types WHERE code = ?').get(b.vehicleTypeCode) as { id: number } | undefined;
   if (!vehicleType) check({ field: 'vehicleTypeCode', message: 'Loại phương tiện không hợp lệ.' });
   const svc = db.prepare(`
-    SELECT s.base_price AS price, c.station_lat AS lat, c.station_lng AS lng
+    SELECT s.base_price AS price, c.station_lat AS lat, c.station_lng AS lng, c.service_radius_km AS radiusKm
     FROM rescue_services s JOIN rescue_companies c ON c.id = s.company_id
     WHERE s.id = ? AND s.company_id = ? AND s.is_active = 1 AND c.approval_status = 'Approved'`)
-    .get(Number(b.serviceId), Number(b.companyId)) as { price: number; lat: number; lng: number } | undefined;
+    .get(Number(b.serviceId), Number(b.companyId)) as { price: number; lat: number; lng: number; radiusKm: number } | undefined;
   if (!svc) check({ field: 'serviceId', message: 'Công ty hoặc gói dịch vụ không còn khả dụng, vui lòng chọn lại.' });
 
+  const incident = { lat: Number(b.lat), lng: Number(b.lng) };
+  if (haversineKm(svc!, incident) > svc!.radiusKm) {
+    check({ field: 'serviceId', message: 'Vị trí sự cố nằm ngoài phạm vi phục vụ của công ty, vui lòng chọn đơn vị khác.' });
+  }
+
   // Server tự tính lại khoảng cách và giá, không tin số client gửi.
-  const { distanceKm } = await getEtaEstimator().estimate(svc!, { lat: Number(b.lat), lng: Number(b.lng) });
+  const { distanceKm } = await getEtaEstimator().estimate(svc!, incident);
   const c = b.classification;
   db.exec('BEGIN');
   let id: number;

@@ -76,6 +76,7 @@ test('UC03 tạo đơn: server tính lại khoảng cách/giá, lưu phân loạ
   assert.equal(await field({ photoUrl: 'https://evil.example/x.jpg' }), 'photoUrl');
   assert.equal(await field({ classification: { incidentType: 'X', urgency: 'LOW', source: 'AI' } }), 'classification');
   assert.equal(await field({ serviceId: makeCompany().serviceId }), 'serviceId', 'gói của công ty khác');
+  assert.equal(await field({ lat: 10.7769, lng: 106.7009 }), 'serviceId', 'ngoài phạm vi phục vụ');
   const pending = makeCompany('Pending');
   assert.equal(await field({ companyId: pending.companyId, serviceId: pending.serviceId }), 'serviceId', 'công ty chưa duyệt');
   getDb().prepare('UPDATE rescue_services SET is_active = 0 WHERE id = ?').run(c.serviceId);
