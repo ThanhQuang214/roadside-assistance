@@ -29,7 +29,7 @@ export default function DispatchPage() {
   const seenPending = useRef<Set<number> | null>(null);
 
   // Bước 1: danh sách + đơn đang mở, polling 5 giây; báo khi có đơn Pending mới.
-  async function load() {
+  async function load(clearError = true) {
     try {
       const list: RescueRequest[] = (await apiFetch(`/rescue-requests${status ? `?status=${status}` : ''}`)).items;
       const pending = list.filter((r) => r.status === 'Pending').map((r) => r.id);
@@ -41,6 +41,7 @@ export default function DispatchPage() {
         const latest: RescueRequest = (await apiFetch(`/rescue-requests/${detail.id}`)).request;
         setDetail((cur) => (cur?.id === latest.id ? latest : cur)); // người dùng vừa chọn đơn khác thì giữ đơn mới chọn
       }
+      if (clearError) setError('');
     } catch (e) {
       setError((e as Error).message);
     }
@@ -51,7 +52,7 @@ export default function DispatchPage() {
    * Gọi một thao tác trên đơn đang mở. Lỗi theo ô (ETA, số tiền…) → ném lại để form/hộp thoại hiện dưới ô (UC09-4.2, 7.1);
    * lỗi khác (409 trạng thái đã đổi – 4.1, 5.1; lỗi mạng) → banner + tải lại đơn, trả false.
    */
-  async function act(path: string, method: string, body: unknown, success: string): Promise<boolean> {
+  async function act(path: string, method: string, body: unknown, success: string, keepInputOnFailure = false): Promise<boolean> {
     setBusy(true);
     try {
       const { request } = await apiFetch(`/rescue-requests/${detail!.id}/${path}`, { method, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -62,10 +63,13 @@ export default function DispatchPage() {
     } catch (e) {
       if ((e as ApiError).field) throw e;
       setError((e as Error).message);
+      // Mất mạng/lỗi máy chủ: form hoặc modal giữ nguyên dữ liệu để gửi lại.
+      // Xung đột 409: đóng modal theo UI Spec rồi tải trạng thái mới nhất.
+      if (keepInputOnFailure && (e as ApiError).status !== 409) throw e;
       return false;
     } finally {
       setBusy(false);
-      load();
+      load(false);
     }
   }
 
@@ -139,15 +143,15 @@ export default function DispatchPage() {
       {dialog === 'reject' && (
         <ConfirmDialog title={`Từ chối yêu cầu #${detail!.id}`} danger confirmLabel="Xác nhận từ chối" reasonLabel="Lý do từ chối" reasonOptions={REJECT_REASONS}
           message="Người gặp sự cố sẽ thấy lý do và có thể chọn đơn vị khác."
-          onConfirm={async (reason) => { await act('reject', 'POST', { reason }, 'Đã từ chối yêu cầu'); setDialog(null); }}
+          onConfirm={async (reason) => { await act('reject', 'POST', { reason }, 'Đã từ chối yêu cầu', true); setDialog(null); }}
           onClose={() => setDialog(null)} />
       )}
       {dialog === 'complete' && (
         <Modal title={`Hoàn tất yêu cầu #${detail!.id}`} onClose={() => setDialog(null)}>
           <PaymentForm initial={{ amount: detail!.estimatedPrice ?? 0, method: 'CASH', note: '' }} submitLabel="Hoàn tất & lưu thanh toán" busy={busy}
-            onSubmit={async (payment) => { await act('complete', 'POST', { payment }, 'Đã hoàn tất yêu cầu cứu hộ'); setDialog(null); }}
+            onSubmit={async (payment) => { await act('complete', 'POST', { payment }, 'Đã hoàn tất yêu cầu cứu hộ', true); setDialog(null); }}
             extra={<Button type="button" variant="secondary" size="sm" disabled={busy}
-              onClick={async () => { await act('complete', 'POST', {}, 'Đã hoàn tất, nhớ ghi thanh toán sau'); setDialog(null); }}>Ghi thanh toán sau</Button>} />
+              onClick={async () => { await act('complete', 'POST', {}, 'Đã hoàn tất, nhớ ghi thanh toán sau', true); setDialog(null); }}>Ghi thanh toán sau</Button>} />
         </Modal>
       )}
       {toast}
@@ -188,7 +192,7 @@ function RequestInfo({ r }: { r: RescueRequest }) {
   );
 }
 
-type ActFn = (path: string, method: string, body: unknown, success: string) => Promise<boolean>;
+type ActFn = (path: string, method: string, body: unknown, success: string, keepInputOnFailure?: boolean) => Promise<boolean>;
 
 /** Thao tác hợp lệ theo trạng thái hiện tại (khớp bảng api-contract §2; server vẫn kiểm tra lại qua State Pattern). */
 function Actions({ r, busy, act, onReject, onComplete }: { r: RescueRequest; busy: boolean; act: ActFn; onReject: () => void; onComplete: () => void }) {
@@ -197,7 +201,7 @@ function Actions({ r, busy, act, onReject, onComplete }: { r: RescueRequest; bus
       return (
         <div className="flex flex-col gap-3 border-t border-border pt-4">
           <EtaForm label="Thời gian dự kiến đến (phút)" submitLabel="Nhận đơn" busy={busy}
-            onSubmit={(etaMinutes) => act('accept', 'POST', { etaMinutes }, `Đã nhận yêu cầu #${r.id}`)} />
+            onSubmit={(etaMinutes) => act('accept', 'POST', { etaMinutes }, `Đã nhận yêu cầu #${r.id}`, true)} />
           <Button variant="danger" size="sm" className="self-start" disabled={busy} onClick={onReject}>Từ chối đơn</Button>
         </div>
       );
@@ -206,7 +210,7 @@ function Actions({ r, busy, act, onReject, onComplete }: { r: RescueRequest; bus
       return (
         <div className="flex flex-col gap-3 border-t border-border pt-4">
           <EtaForm label="Cập nhật ETA (phút)" initial={r.etaMinutes} submitLabel="Cập nhật ETA" secondary busy={busy}
-            onSubmit={(etaMinutes) => act('eta', 'PATCH', { etaMinutes }, 'Đã cập nhật ETA')} />
+            onSubmit={(etaMinutes) => act('eta', 'PATCH', { etaMinutes }, 'Đã cập nhật ETA', true)} />
           {r.status === 'Accepted'
             ? <Button size="sm" className="self-start" loading={busy} onClick={() => act('start', 'POST', undefined, 'Đã chuyển sang Đang xử lý')}>Bắt đầu xử lý</Button>
             : <Button size="sm" className="self-start" disabled={busy} onClick={onComplete}>Hoàn tất cứu hộ</Button>}
@@ -217,7 +221,7 @@ function Actions({ r, busy, act, onReject, onComplete }: { r: RescueRequest; bus
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <h3 className="text-label">{r.payment ? 'Sửa thông tin thanh toán' : 'Ghi nhận thanh toán (UC09-6a)'}</h3>
           <PaymentForm initial={r.payment ?? { amount: r.estimatedPrice ?? 0, method: 'CASH', note: '' }} submitLabel="Lưu thanh toán" busy={busy}
-            onSubmit={(p) => act('payment', 'PUT', p, 'Đã lưu thông tin thanh toán')} />
+            onSubmit={(p) => act('payment', 'PUT', p, 'Đã lưu thông tin thanh toán', true)} />
         </div>
       );
     default:
