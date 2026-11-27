@@ -75,11 +75,12 @@ Một bộ quy tắc validation dùng cho **cả form và API** ([`rescue-valida
 
 | Tình huống (báo cáo 3.2.1-c / đặc tả UC) | Hành vi UI | Nơi cài |
 |---|---|---|
+| Không tải được danh mục phương tiện / dịch vụ | Banner đỏ + "Thử lại"; khóa nút phân tích tới khi danh mục sẵn sàng | S02 `loadCatalogs` |
 | Thiếu vị trí, mô tả < 10 / > 500 ký tự, SĐT sai (UC03-3.1) | Chữ đỏ dưới ô, viền đỏ, focus ô lỗi đầu tiên, giữ dữ liệu | S02 `validateRequestDraft` |
 | GPS bị từ chối / quá 5 s (UC03-2.1) | Banner vàng, chạm bản đồ để chọn | `LocationPicker` |
 | AI lỗi / 503 / quá 5 s (UC03-4.1) | Banner xanh, người dùng tự chọn loại dịch vụ | S03 |
 | Không có công ty trong bán kính (UC03-5.2) | Banner vàng + nút "Mở rộng lên X km" | S03 |
-| Mất mạng / lỗi máy chủ khi gửi (UC03-7.1, UC09-7.1) | Banner đỏ, dữ liệu giữ nguyên, bấm gửi lại; `NetworkBanner` báo mất mạng | S03, C-02, `apiFetch` |
+| Mất mạng / lỗi máy chủ khi gửi (UC03-7.1, UC09-7.1) | Banner đỏ, form/modal và dữ liệu giữ nguyên để gửi lại; `NetworkBanner` báo mất mạng | S03, C-02, `apiFetch` |
 | Trạng thái đơn đã bị bên kia đổi (UC05-4.1, UC09-4.1, 5.1) | Đóng hộp thoại, banner đỏ nêu trạng thái hiện tại ("Không thể hủy yêu cầu vì đơn đang ở trạng thái Đã tiếp nhận"), tự tải lại đơn | `InvalidTransitionError` (message tiếng Việt) + S04/C-02 |
 | Lý do hủy / từ chối bỏ trống | Lỗi trong hộp thoại, không gọi API | `ConfirmDialog` |
 | ETA trống / ≤ 0 / > 600 (UC09-4.2) | Lỗi dưới ô ETA | `EtaForm` + `validateEta` |
@@ -92,14 +93,16 @@ Một bộ quy tắc validation dùng cho **cả form và API** ([`rescue-valida
 
 | File | Thêm mới | Dùng ở |
 |---|---|---|
-| [`use-polling.ts`](../../src/shared/ui/use-polling.ts) | `usePolling(load, ms, deps)` – gọi ngay rồi lặp; bỏ lượt khi tab ẩn; `ms = null` để dừng | S04 (dừng khi đơn kết thúc), C-02 |
+| [`use-polling.ts`](../../src/shared/ui/use-polling.ts) | `usePolling(load, ms, deps)` – gọi ngay rồi lặp; bỏ lượt khi tab ẩn hoặc lượt trước chưa xong; `ms = null` để dừng | S04 (dừng khi đơn kết thúc), C-02 |
 | [`format.ts`](../../src/shared/ui/format.ts) | `formatVnd`, `formatDateTime`, `formatTime` | S01, S03, S04, C-02 |
 | [`modal.tsx`](../../src/shared/ui/modal.tsx) | `ConfirmDialog` prop `reasonOptions` – chip lý do chọn nhanh, chạm để điền, vẫn sửa được | Hủy yêu cầu (UC05 bước 2), từ chối đơn (UC09-3a); demo ở `/ui-kit` |
 | [`feedback.tsx`](../../src/shared/ui/feedback.tsx) | `RESCUE_STATUS_UI` lấy nhãn từ `RESCUE_STATUS_LABEL` (State Pattern) – một nguồn nhãn cho chip và thông báo lỗi 409 | Mọi màn có chip trạng thái |
 
 ---
 
-## 5. Kết quả kiểm tra ghép nối (chạy thật, 26/11/2026)
+## 5. Kết quả kiểm tra ghép nối
+
+### 5.1 Kiểm tra thủ công có sẵn (26/11/2026)
 
 Chạy `npm run dev` với CSDL demo (1 người dùng, 2 công ty đã duyệt ở Hà Nội), OSRM công khai:
 
@@ -109,6 +112,18 @@ Chạy `npm run dev` với CSDL demo (1 người dùng, 2 công ty đã duyệt 
 4. Mở hộp thoại hủy, công ty nhận đơn trước khi xác nhận → banner "Không thể hủy… Đã tiếp nhận", trang tự làm mới. Hủy đơn khác: bỏ trống lý do → báo lỗi; chọn lý do nhanh → toast thành công.
 5. C-02: đơn mới → toast "Có 1 yêu cầu cứu hộ mới"; ETA trống → lỗi dưới ô; nhận (18 phút) → Bắt đầu xử lý → Hoàn tất & lưu thanh toán 80.000 đ tiền mặt.
 6. Khách hủy ngay trước khi công ty bấm "Nhận đơn" → banner "Không thể nhận đơn… Đã hủy", bảng tự cập nhật.
+
+### 5.2 Kiểm thử hồi quy UI do M4 bổ sung (27/11/2026)
+
+File [`ui-flow.ui.test.tsx`](../../src/rescue-request/ui-flow.ui.test.tsx) kiểm tra phần ghép nối mà không thay thế test nghiệp vụ API của M2/M3:
+
+1. S01 tải lỗi → hiện nút "Thử lại" → tải thành công và xóa banner cũ.
+2. S04 tải lỗi → thử lại đúng `requestId` đang mở và hiển thị chi tiết đơn.
+3. S02 tải danh mục lỗi → khóa nút tiếp tục → thử lại, phục hồi danh mục phương tiện/dịch vụ.
+4. C-02 từ chối đơn khi mất mạng → giữ modal và lý do đã nhập để gửi lại.
+5. [`use-polling.test.tsx`](../../src/shared/ui/use-polling.test.tsx) xác nhận không tạo request chồng nhau khi mạng chậm hơn chu kỳ 5 giây.
+
+Lệnh kiểm tra: `npm run test:all`, `npm run typecheck`, `npm run build`. Kết quả ngày 27/11/2026: 30 test API/nghiệp vụ và 14 test UI đều đạt; typecheck và production build đạt.
 
 ## 6. Việc còn mở
 1. Cập nhật lại file PDF Screen Transition Diagram và Figma theo mục 1 (xuất PNG từ Mermaid để chèn báo cáo).

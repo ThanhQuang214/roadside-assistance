@@ -6,9 +6,20 @@ export function usePolling(load: () => unknown, ms: number | null, deps: unknown
   const latest = useRef(load);
   latest.current = load;
   useEffect(() => {
-    latest.current();
+    let running = false;
+    const run = async () => {
+      if (running) return;
+      running = true;
+      try {
+        await latest.current();
+      } finally {
+        running = false;
+      }
+    };
+    run();
     if (ms == null) return;
-    const t = setInterval(() => { if (!document.hidden) latest.current(); }, ms);
+    // Không tạo nhiều request chồng nhau khi mạng chậm hơn chu kỳ polling.
+    const t = setInterval(() => { if (!document.hidden) run(); }, ms);
     return () => clearInterval(t);
   }, [ms, ...deps]);
 }
